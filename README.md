@@ -37,4 +37,19 @@ pnpm build
 
 `pnpm format` runs Prettier.
 
+## Deploy and CI
+
+- **Previews:** Vercel deploys a preview of every PR. Get its URL from the Vercel comment on the PR, never from the branch name.
+- **Production:** builds from `main`, with automatic promotion off. Only the product owner promotes a build.
+- **Vercel project:** Root Directory `apps/web`, Node 24.x (pinned by `engines` in `apps/web/package.json`).
+- **Protected previews:** send the bypass header, using the secret from the `VERCEL_AUTOMATION_BYPASS_SECRET` variable:
+
+  ```sh
+  curl -H "x-vercel-protection-bypass: $VERCEL_AUTOMATION_BYPASS_SECRET" <preview-url>/
+  ```
+
+  For browser tests, also send `x-vercel-set-bypass-cookie: true` on the first request.
+
+- **CI:** `.github/workflows/ci.yml` (GitHub Actions) runs install, `pnpm typecheck`, `lint`, `test` and `build` on every PR and every push to `main`. A PR must be green before review.
+
 Product docs: `docs/project.md` and `docs/plan.md`.
