@@ -51,5 +51,6 @@ pnpm build
   For browser tests, also send `x-vercel-set-bypass-cookie: true` on the first request.
 
 - **CI:** `.github/workflows/ci.yml` (GitHub Actions) runs install, `pnpm typecheck`, `lint`, `test` and `build` on every PR and every push to `main`. A PR must be green before review.
+- **Phase 0 verified:** 2026-11-07, preview on Vercel project `kivo` loads the home page.
 
 Product docs: `docs/project.md` and `docs/plan.md`.
