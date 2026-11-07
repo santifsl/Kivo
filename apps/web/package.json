@@ -1,0 +1,28 @@
+{
+  "name": "@kivo/web",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev --port 3000",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "next typegen && tsc --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@kivo/shared": "workspace:*",
+    "next": "16.4.5",
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "4.3.5",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@next/eslint-plugin-next": "16.4.5",
+    "eslint-plugin-react-hooks": "7.1.1",
+    "tailwindcss": "4.3.5"
+  }
+}
