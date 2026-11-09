@@ -2,6 +2,11 @@
 // pglite + pgvector, Supabase's API roles and default privileges, a stub of
 // `auth.jwt()`, and every migration in supabase/migrations applied in order.
 // Never use a local Supabase stack or a Docker database (CLAUDE.md).
+//
+// Usage (see packages/db/test for more):
+//   const s = await createSupabasePglite();
+//   await s.as("authenticated", "user_a", (tx) => tx.query("select * from public.projects"));
+//   await s.close();
 
 import { readdir, readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
