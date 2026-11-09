@@ -1,14 +1,22 @@
-import { UserButton } from "@clerk/nextjs";
 import { auth } from "@clerk/nextjs/server";
-import { APP_NAME } from "@kivo/shared";
+import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
+import { GlassPanel } from "@/components/ui/glass-panel";
+import { PageHeader } from "@/components/ui/page-header";
 
-// Placeholder. B2 replaces this with the dashboard shell.
-export default async function DashboardPage() {
+export default async function ProjectsPage() {
   await auth.protect();
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center gap-4 p-4">
-      <h1 className="text-2xl font-semibold">{APP_NAME}</h1>
-      <UserButton />
-    </main>
+    <>
+      <PageHeader title="Projects" description="Each project is one website with its own chat widget." />
+      <GlassPanel as="section">
+        <EmptyState
+          title="No projects yet"
+          description="Create a project to add your knowledge and get the widget's install code."
+          // Phase 2 wires project creation.
+          action={<Button disabled>New project</Button>}
+        />
+      </GlassPanel>
+    </>
   );
 }
