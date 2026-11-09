@@ -1,1 +1,123 @@
 @import "tailwindcss";
+
+/*
+ * Design tokens (project.md §13). The only place colors, radii, shadows and blur are defined.
+ * Tailwind's default palette, radii, shadows and blur are removed, so an ad-hoc class like
+ * `bg-red-500` or `shadow-xl` does not exist. Use the semantic tokens below.
+ *
+ * Light (dashboard) is the default. Wrap a page in `.theme-dark` for the dark set (landing).
+ */
+
+/* Raw monochrome palette. `static` keeps the variables even when no class uses them. */
+@theme static {
+  --color-*: initial;
+  --color-white: #ffffff;
+  --color-black: #000000;
+  --color-grey-50: #fafafa;
+  --color-grey-100: #f5f5f5;
+  --color-grey-200: #e5e5e5;
+  --color-grey-300: #d4d4d4;
+  --color-grey-400: #a3a3a3;
+  --color-grey-500: #737373;
+  --color-grey-600: #525252;
+  --color-grey-700: #404040;
+  --color-grey-800: #262626;
+  --color-grey-900: #171717;
+  --color-grey-950: #0a0a0a;
+
+  --radius-*: initial;
+  --radius-sm: 0.375rem;
+  --radius-md: 0.625rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.5rem;
+
+  --blur-*: initial;
+  --blur-sm: 8px;
+  --blur-glass: 20px;
+}
+
+/* Semantic tokens: utilities read the variable at use time, so `.theme-dark` can switch them. */
+@theme inline {
+  --color-canvas: var(--canvas); /* page background */
+  --color-ink: var(--ink); /* primary text */
+  --color-ink-muted: var(--ink-muted); /* secondary text */
+  --color-ink-subtle: var(--ink-subtle); /* hints, placeholders */
+  --color-line: var(--line); /* borders, dividers */
+  --color-glass: var(--glass); /* translucent panel */
+  --color-glass-strong: var(--glass-strong); /* near-opaque, for menus over content (a nested panel gets no blur) */
+  --color-accent: var(--accent); /* primary button */
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-ink: var(--accent-ink); /* text on accent */
+  --color-wash: var(--wash); /* secondary button, active nav */
+  --color-wash-strong: var(--wash-strong); /* hover on wash */
+  --color-skeleton: var(--skeleton); /* loading placeholders */
+
+  --shadow-*: initial;
+  --shadow-sm: var(--shadow-sm-value);
+  --shadow-glass: var(--shadow-glass-value);
+  --shadow-glass-lg: var(--shadow-glass-lg-value);
+}
+
+:root {
+  --canvas: var(--color-grey-100);
+  --ink: var(--color-grey-950);
+  --ink-muted: var(--color-grey-600);
+  --ink-subtle: var(--color-grey-500);
+  --line: rgb(0 0 0 / 0.08);
+  --glass: rgb(255 255 255 / 0.6);
+  --glass-strong: rgb(255 255 255 / 0.96);
+  --accent: var(--color-grey-950);
+  --accent-hover: var(--color-grey-800);
+  --accent-ink: var(--color-white);
+  --wash: rgb(0 0 0 / 0.04);
+  --wash-strong: rgb(0 0 0 / 0.08);
+  --skeleton: rgb(0 0 0 / 0.07);
+  --glow-1: rgb(255 255 255 / 0.95);
+  --glow-2: rgb(0 0 0 / 0.06);
+
+  --shadow-sm-value: 0 1px 2px rgb(0 0 0 / 0.06);
+  --shadow-glass-value: inset 0 1px 0 rgb(255 255 255 / 0.7), 0 8px 32px rgb(0 0 0 / 0.06);
+  --shadow-glass-lg-value: inset 0 1px 0 rgb(255 255 255 / 0.7), 0 16px 48px rgb(0 0 0 / 0.12);
+
+  color-scheme: light;
+}
+
+.theme-dark {
+  --canvas: var(--color-black);
+  --ink: var(--color-grey-50);
+  --ink-muted: var(--color-grey-400);
+  --ink-subtle: var(--color-grey-500);
+  --line: rgb(255 255 255 / 0.1);
+  --glass: rgb(255 255 255 / 0.06);
+  --glass-strong: rgb(23 23 23 / 0.96);
+  --accent: var(--color-white);
+  --accent-hover: var(--color-grey-200);
+  --accent-ink: var(--color-black);
+  --wash: rgb(255 255 255 / 0.06);
+  --wash-strong: rgb(255 255 255 / 0.12);
+  --skeleton: rgb(255 255 255 / 0.08);
+  --glow-1: rgb(255 255 255 / 0.08);
+  --glow-2: rgb(255 255 255 / 0.04);
+
+  --shadow-sm-value: 0 1px 2px rgb(0 0 0 / 0.4);
+  --shadow-glass-value: inset 0 1px 0 rgb(255 255 255 / 0.08), 0 8px 32px rgb(0 0 0 / 0.4);
+  --shadow-glass-lg-value: inset 0 1px 0 rgb(255 255 255 / 0.08), 0 16px 48px rgb(0 0 0 / 0.6);
+
+  color-scheme: dark;
+}
+
+/* Soft light spots behind glass panels, so the blur has something to show. */
+@utility bg-glow {
+  background-color: var(--canvas);
+  background-image:
+    radial-gradient(60rem 40rem at 0% 0%, var(--glow-1), transparent 60%),
+    radial-gradient(50rem 40rem at 100% 100%, var(--glow-2), transparent 60%);
+  background-attachment: fixed;
+}
+
+@layer base {
+  body {
+    background-color: var(--canvas);
+    color: var(--ink);
+  }
+}
