@@ -9,4 +9,8 @@ describe("unauthorizedResponse", () => {
       error: { code: "unauthorized", message: expect.any(String) },
     });
   });
+
+  it("is never cached", () => {
+    expect(unauthorizedResponse().headers.get("cache-control")).toBe("no-store");
+  });
 });
