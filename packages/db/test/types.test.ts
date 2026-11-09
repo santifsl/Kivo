@@ -5,7 +5,8 @@ import { TABLES } from "./fixtures";
 
 // Guards against a migration landing without regenerated types: every
 // table's Row type in types.ts must list exactly the table's columns, with
-// the same nullability.
+// the same nullability. If it fails, regenerate types.ts (see PR #8 for how)
+// rather than editing it by hand.
 
 let s: SupabasePglite;
 let typesSource: string;
