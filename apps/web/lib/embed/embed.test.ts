@@ -197,3 +197,15 @@ describe("createPanelMessenger", () => {
     expect(onMessage).not.toHaveBeenCalled();
   });
 });
+
+describe("isNearBottom", () => {
+  it("is true at or near the bottom, false when scrolled up", async () => {
+    const { isNearBottom, FOLLOW_THRESHOLD_PX } = await import("./follow-bottom");
+    expect(isNearBottom({ scrollHeight: 1000, clientHeight: 400, scrollTop: 600 })).toBe(true);
+    expect(
+      isNearBottom({ scrollHeight: 1000, clientHeight: 400, scrollTop: 600 - FOLLOW_THRESHOLD_PX }),
+    ).toBe(true);
+    expect(isNearBottom({ scrollHeight: 1000, clientHeight: 400, scrollTop: 500 })).toBe(false);
+    expect(isNearBottom({ scrollHeight: 300, clientHeight: 400, scrollTop: 0 })).toBe(true);
+  });
+});

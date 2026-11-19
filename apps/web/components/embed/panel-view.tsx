@@ -1,6 +1,7 @@
 import { APP_NAME, MAX_MESSAGE_LENGTH } from "@kivo/shared";
 import type { FormEvent, Ref } from "react";
 import type { ChatMessage } from "@/lib/embed/chat-state";
+import { useFollowBottom } from "../../lib/embed/follow-bottom";
 import { cn } from "../ui/cn";
 
 export const FALLBACK_HEADER = "Chat";
@@ -99,13 +100,23 @@ function PanelChat({
   inputRef,
 }: PanelViewProps) {
   const canSend = draft.trim().length > 0 && !typing;
+  // Follow new messages while the visitor is at the bottom; keep their place if they scrolled up.
+  const {
+    ref: listRef,
+    onScroll: onListScroll,
+    follow,
+  } = useFollowBottom<HTMLOListElement>(`${messages.length}:${typing}`);
   const submit = (e: FormEvent) => {
     e.preventDefault();
-    if (canSend) onSubmit();
+    if (!canSend) return;
+    follow(); // their own message should always come into view
+    onSubmit();
   };
   return (
     <>
       <ol
+        ref={listRef}
+        onScroll={onListScroll}
         aria-live="polite"
         aria-label="Messages"
         className="flex flex-1 flex-col gap-3 overflow-y-auto px-4 py-4"
