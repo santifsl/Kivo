@@ -3,7 +3,11 @@
  *
  * - "page": owner pages. Signed-out → redirect to sign-in.
  * - "owner-api": owner API routes. Signed-out → 401 JSON (never a redirect).
- * - "public": everything else (landing, sign-in/up, embed, widget API, Clerk webhook, PostHog config).
+ * - "public": everything else (landing, sign-in/up, Clerk webhook, PostHog config).
+ *
+ * The widget (WIDGET_PREFIXES) is public too, but it never reaches the proxy at all: the
+ * matcher in proxy.ts excludes it, so Clerk doesn't run there (no handshake redirect inside
+ * the customer's iframe).
  */
 export type RouteAccess = "page" | "owner-api" | "public";
 
@@ -16,15 +20,25 @@ export const AFTER_SIGN_OUT_PATH = SIGN_IN_PATH;
 export const PROTECTED_PAGE_PREFIXES = ["/dashboard"] as const;
 
 /** Owner API routes (prefix match on whole path segments). */
-export const OWNER_API_PREFIXES = ["/api/projects", "/api/knowledge", "/api/conversations"] as const;
+export const OWNER_API_PREFIXES = [
+  "/api/projects",
+  "/api/knowledge",
+  "/api/conversations",
+] as const;
+
+/**
+ * The widget's routes: anonymous visitors, often inside a cross-origin iframe. The proxy
+ * matcher excludes them so Clerk never runs there; keep this list and the matcher in sync
+ * (lib/auth/proxy-matcher.test.ts checks both).
+ */
+export const WIDGET_PREFIXES = ["/embed", "/api/widget"] as const;
 
 /** Documented public routes. Not used for matching (unlisted routes are public); kept for tests and readers. */
 export const PUBLIC_PREFIXES = [
   "/",
   SIGN_IN_PATH,
   SIGN_UP_PATH,
-  "/embed",
-  "/api/widget",
+  ...WIDGET_PREFIXES,
   "/api/clerk",
   "/api/posthog-config",
 ] as const;
