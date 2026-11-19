@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useReducer } from "react";
+import { useReducer, useState } from "react";
 import type { Plan, Project } from "@kivo/shared";
 import { createProjectRequest, deleteProjectRequest, renameProjectRequest } from "./projects-api";
 import { ProjectsScreen, type ProjectsHandlers } from "./projects-screen";
@@ -17,18 +17,27 @@ export function ProjectsView({ projects, plan }: { projects: Project[]; plan: Pl
   const router = useRouter();
   const [state, dispatch] = useReducer(projectsReducer, initialProjectsState(projects, plan));
 
+  // useReducer only reads its props once. When a refresh brings a new list or
+  // plan (e.g. another tab deleted a project), take them, keeping form edits.
+  // Adjusting state during render: https://react.dev/learn/you-might-not-need-an-effect
+  const [synced, setSynced] = useState({ projects, plan });
+  if (synced.projects !== projects || synced.plan !== plan) {
+    setSynced({ projects, plan });
+    dispatch({ type: "serverSynced", projects, plan });
+  }
+
   const handlers: ProjectsHandlers = {
     onDraftChange: (name) => dispatch({ type: "draftChanged", name }),
     onCreate: async () => {
       if (state.pending || state.draft.trim() === "") return;
       dispatch({ type: "createStarted" });
       const result = await createProjectRequest(state.draft.trim());
-      if (result.ok) router.refresh();
       dispatch(
         result.ok
           ? { type: "createSucceeded", project: result.data.project }
           : { type: "createFailed", error: result.error },
       );
+      if (result.ok) router.refresh();
     },
     onRenameOpen: (project) => dispatch({ type: "renameOpened", project }),
     onRenameDraftChange: (name) => dispatch({ type: "renameDraftChanged", name }),
@@ -37,12 +46,12 @@ export function ProjectsView({ projects, plan }: { projects: Project[]; plan: Pl
       if (state.pending || dialog?.kind !== "rename" || dialog.name.trim() === "") return;
       dispatch({ type: "dialogStarted" });
       const result = await renameProjectRequest(dialog.project.id, dialog.name.trim());
-      if (result.ok) router.refresh();
       dispatch(
         result.ok
           ? { type: "renameSucceeded", project: result.data.project }
           : { type: "dialogFailed", error: result.error },
       );
+      if (result.ok) router.refresh();
     },
     onDeleteOpen: (project) => dispatch({ type: "deleteOpened", project }),
     // Only the confirm button in the dialog deletes.
@@ -51,10 +60,10 @@ export function ProjectsView({ projects, plan }: { projects: Project[]; plan: Pl
       if (state.pending || dialog?.kind !== "delete") return;
       dispatch({ type: "dialogStarted" });
       const result = await deleteProjectRequest(dialog.project.id);
-      if (result.ok) router.refresh();
       dispatch(
         result.ok ? { type: "deleteSucceeded", id: dialog.project.id } : { type: "dialogFailed", error: result.error },
       );
+      if (result.ok) router.refresh();
     },
     onDialogClose: () => dispatch({ type: "dialogClosed" }),
   };

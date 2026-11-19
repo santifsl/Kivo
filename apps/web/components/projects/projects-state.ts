@@ -24,6 +24,7 @@ export interface ProjectsState {
 }
 
 export type ProjectsAction =
+  | { type: "serverSynced"; projects: Project[]; plan: Plan }
   | { type: "draftChanged"; name: string }
   | { type: "createStarted" }
   | { type: "createSucceeded"; project: Project }
@@ -48,12 +49,22 @@ export function showsLimitMessage(state: ProjectsState): boolean {
 
 export function projectsReducer(state: ProjectsState, action: ProjectsAction): ProjectsState {
   switch (action.type) {
+    case "serverSynced":
+      // Fresh props from a server render (router.refresh). The server's list and
+      // plan win; the typed name, an open dialog and its edits stay.
+      return { ...state, projects: action.projects, plan: action.plan, limitFromServer: false };
     case "draftChanged":
       return { ...state, draft: action.name, createError: null };
     case "createStarted":
       return { ...state, pending: "create", createError: null };
     case "createSucceeded":
-      return { ...state, pending: null, draft: "", projects: [action.project, ...state.projects] };
+      return {
+        ...state,
+        pending: null,
+        draft: "",
+        // A refresh may already have brought it in.
+        projects: [action.project, ...state.projects.filter((p) => p.id !== action.project.id)],
+      };
     case "createFailed":
       if (action.error.code === "plan_limit") {
         // The upgrade message replaces the error text.

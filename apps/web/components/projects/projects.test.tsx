@@ -101,13 +101,13 @@ describe("ProjectsScreen", () => {
 
   it("delete asks for confirmation naming the project and the widget", () => {
     const listed = state([project(), other], "pro");
-    expect(render(listed)).not.toContain('role="dialog"');
+    expect(render(listed)).not.toContain("<dialog");
 
     const confirming = run(listed, { type: "deleteOpened", project: project() });
     // Opening the dialog removes nothing; only confirming does.
     expect(confirming.projects).toHaveLength(2);
     const html = render(confirming);
-    expect(html).toContain('role="dialog"');
+    expect(html).toContain("<dialog");
     expect(html).toContain("Delete project?");
     expect(html).toContain("Acme docs");
     expect(html).toContain("Its widget stops working");
@@ -167,6 +167,36 @@ describe("projectsReducer", () => {
     expect(after.projects).toEqual([]);
     expect(after.dialog).toBeNull();
     expect(showsLimitMessage(after)).toBe(false);
+  });
+
+  it("fresh server props replace the list and plan, keeping form edits", () => {
+    const editing = run(
+      state([project(), other], "pro"),
+      { type: "draftChanged", name: "Half typed" },
+      { type: "renameOpened", project: other },
+      { type: "renameDraftChanged", name: "Blog 2" },
+    );
+    const synced = run(editing, { type: "serverSynced", projects: [other], plan: "pro" });
+    expect(synced.projects).toEqual([other]);
+    expect(synced.draft).toBe("Half typed");
+    expect(synced.dialog).toMatchObject({ kind: "rename", name: "Blog 2" });
+  });
+
+  it("a sync that frees a slot re-enables create on Free", () => {
+    const atLimit = state([project()], "free");
+    expect(render(atLimit)).toMatch(/<input[^>]*id="new-project-name"[^>]*disabled=""/);
+    const synced = run(atLimit, { type: "serverSynced", projects: [], plan: "free" });
+    expect(render(synced)).not.toMatch(/<input[^>]*id="new-project-name"[^>]*disabled=""/);
+    expect(showsLimitMessage(synced)).toBe(false);
+  });
+
+  it("create doesn't duplicate a project a refresh already brought in", () => {
+    const created = project({ id: "33333333-3333-4333-8333-333333333333", name: "New" });
+    const after = run(state([other], "pro"), { type: "serverSynced", projects: [created, other], plan: "pro" }, {
+      type: "createSucceeded",
+      project: created,
+    });
+    expect(after.projects.map((p) => p.id)).toEqual([created.id, other.id]);
   });
 
   it("the dialog can't be closed while its request runs", () => {

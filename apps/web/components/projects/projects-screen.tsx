@@ -168,7 +168,6 @@ function ProjectDialog({ state, handlers }: { state: ProjectsState; handlers: Pr
             <input
               name="name"
               className={INPUT_CLASSES}
-              autoFocus
               autoComplete="off"
               maxLength={PROJECT_NAME_MAX_LENGTH}
               value={dialog.name}
@@ -203,7 +202,7 @@ function ProjectDialog({ state, handlers }: { state: ProjectsState; handlers: Pr
     >
       {error}
       <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-        <Button variant="secondary" onClick={handlers.onDialogClose} disabled={busy} autoFocus>
+        <Button variant="secondary" onClick={handlers.onDialogClose} disabled={busy}>
           Cancel
         </Button>
         <Button onClick={handlers.onDeleteConfirm} loading={busy}>
