@@ -119,6 +119,24 @@ describe("signed out", () => {
   });
 });
 
+describe("setup failure (e.g. a missing Supabase variable)", () => {
+  it.each([
+    ["GET /api/projects", () => projectsRoute.GET()],
+    ["POST /api/projects", () => post({ name: "Site" })],
+    ["PATCH /api/projects/:id", () => patch(ID, { name: "New" })],
+    ["DELETE /api/projects/:id", () => del(ID)],
+  ])("%s → 500 internal JSON, without the error text", async (_, call) => {
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", "");
+    const res = await call();
+    expect(res.headers.get("cache-control")).toBe("no-store");
+    const text = await res.text();
+    expect(res.status).toBe(500);
+    expect(apiErrorSchema.parse(JSON.parse(text)).error.code).toBe("internal");
+    expect(text).not.toContain("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY");
+    expect(pg.requests).toHaveLength(0);
+  });
+});
+
 describe("GET /api/projects", () => {
   it("returns what RLS gives the caller, newest first, plus the plan from the database", async () => {
     const rows = [project(ID, "Newer"), project(OTHER_ID, "Older", "pk_test_zyxwvuts")];

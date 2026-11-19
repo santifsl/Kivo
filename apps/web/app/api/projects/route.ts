@@ -5,9 +5,8 @@ import {
 } from "@kivo/shared";
 import { ensureAccount } from "../../../lib/accounts/ensure-account";
 import { getOwnerPlan } from "../../../lib/accounts/get-owner-plan";
-import { unauthorizedResponse } from "../../../lib/auth/errors";
 import { internalError, ownerError, ownerJson, readJson } from "../../../lib/projects/http";
-import { getOwnerSession } from "../../../lib/projects/owner-session";
+import { requireOwnerSession } from "../../../lib/projects/owner-session";
 import { createProject, listProjects, ProjectLimitError } from "../../../lib/projects/projects";
 
 // GET  /api/projects: the caller's projects (RLS-scoped) and their plan.
@@ -15,8 +14,8 @@ import { createProject, listProjects, ProjectLimitError } from "../../../lib/pro
 // docs/project.md §6.3, §8 (Owner).
 
 export async function GET(): Promise<Response> {
-  const session = await getOwnerSession();
-  if (!session) return unauthorizedResponse();
+  const session = await requireOwnerSession("api/projects GET");
+  if (session instanceof Response) return session;
 
   try {
     const [projects, plan] = await Promise.all([
@@ -33,8 +32,8 @@ export async function GET(): Promise<Response> {
 }
 
 export async function POST(request: Request): Promise<Response> {
-  const session = await getOwnerSession();
-  if (!session) return unauthorizedResponse();
+  const session = await requireOwnerSession("api/projects POST");
+  if (session instanceof Response) return session;
 
   const input = createProjectRequestSchema.safeParse(await readJson(request));
   if (!input.success) return ownerError("invalid_input", "Send a project name of 1–80 characters.");

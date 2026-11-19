@@ -4,9 +4,8 @@ import {
   updateProjectRequestSchema,
   type UpdateProjectResponse,
 } from "@kivo/shared";
-import { unauthorizedResponse } from "../../../../lib/auth/errors";
 import { internalError, ownerError, ownerJson, readJson } from "../../../../lib/projects/http";
-import { getOwnerSession } from "../../../../lib/projects/owner-session";
+import { requireOwnerSession } from "../../../../lib/projects/owner-session";
 import { deleteProject, renameProject } from "../../../../lib/projects/projects";
 
 // PATCH  /api/projects/:id: rename (name only).
@@ -19,8 +18,8 @@ type Context = { params: Promise<{ id: string }> };
 const NOT_FOUND = "Project not found.";
 
 export async function PATCH(request: Request, context: Context): Promise<Response> {
-  const session = await getOwnerSession();
-  if (!session) return unauthorizedResponse();
+  const session = await requireOwnerSession("api/projects/:id PATCH");
+  if (session instanceof Response) return session;
 
   const params = idParamsSchema.safeParse(await context.params);
   if (!params.success) return ownerError("not_found", NOT_FOUND);
@@ -38,8 +37,8 @@ export async function PATCH(request: Request, context: Context): Promise<Respons
 }
 
 export async function DELETE(_request: Request, context: Context): Promise<Response> {
-  const session = await getOwnerSession();
-  if (!session) return unauthorizedResponse();
+  const session = await requireOwnerSession("api/projects/:id DELETE");
+  if (session instanceof Response) return session;
 
   const params = idParamsSchema.safeParse(await context.params);
   if (!params.success) return ownerError("not_found", NOT_FOUND);
