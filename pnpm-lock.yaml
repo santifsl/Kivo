@@ -83,6 +83,10 @@ importers:
         version: 4.3.5
 
   apps/widget:
+    dependencies:
+      '@kivo/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
     devDependencies:
       esbuild:
         specifier: 0.28.2
