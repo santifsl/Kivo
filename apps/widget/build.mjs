@@ -4,7 +4,9 @@
 //   node build.mjs                 → apps/widget/dist/widget.js
 //   node build.mjs --out <file>    → <file> (relative to the caller's cwd);
 //                                    apps/web uses this to serve /widget.js
-//   node build.mjs --watch         → rebuild dist/widget.js on change
+//   node build.mjs --watch [--out <file>] → rebuild on change; `pnpm dev`
+//                                    watches into apps/web/public so the dev
+//                                    server always serves the latest loader
 import * as esbuild from "esbuild";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
