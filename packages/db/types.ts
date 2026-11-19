@@ -258,6 +258,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      consume_message: {
+        Args: { p_limit: number; p_project_id: string }
+        Returns: boolean
+      }
       create_project: {
         Args: {
           p_max_projects: number
@@ -280,6 +284,25 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      match_chunks: {
+        Args: { p_count?: number; p_embedding: string; p_project_id: string }
+        Returns: {
+          content: string
+          id: string
+          similarity: number
+          source_id: string
+        }[]
+      }
+      save_chat_turn: {
+        Args: {
+          p_bot_reply: string
+          p_conversation_id: string
+          p_project_id: string
+          p_visitor_id: string
+          p_visitor_message: string
+        }
+        Returns: string
       }
     }
     Enums: {
