@@ -258,7 +258,29 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      create_project: {
+        Args: {
+          p_max_projects: number
+          p_name: string
+          p_owner_id: string
+          p_public_key: string
+        }
+        Returns: {
+          created_at: string
+          id: string
+          messages_used: number
+          name: string
+          owner_id: string
+          period_start: string
+          public_key: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "projects"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
     }
     Enums: {
       [_ in never]: never
