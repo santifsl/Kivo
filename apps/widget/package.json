@@ -10,6 +10,9 @@
     "lint": "eslint .",
     "test": "vitest run"
   },
+  "dependencies": {
+    "@kivo/shared": "workspace:*"
+  },
   "devDependencies": {
     "esbuild": "0.28.2"
   }
