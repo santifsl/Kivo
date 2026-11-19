@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "node build.mjs --watch",
+    "dev": "node build.mjs --watch --out ../web/public/widget.js",
     "build": "node build.mjs",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
@@ -14,6 +14,7 @@
     "@kivo/shared": "workspace:*"
   },
   "devDependencies": {
-    "esbuild": "0.28.2"
+    "esbuild": "0.28.2",
+    "jsdom": "30.1.3"
   }
 }

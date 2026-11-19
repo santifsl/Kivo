@@ -1,9 +1,7 @@
 /**
- * Widget loader entry. Runs on the customer's site.
- * No behavior yet: the button and iframe come in a later phase.
+ * Widget loader entry: `<script src="https://<app>/widget.js" data-key="pk_…">`.
+ * `document.currentScript` is only set while this file first runs, so read it now.
  */
-export function init(): void {
-  // no-op
-}
+import { mount } from "./loader";
 
-init();
+void mount(document.currentScript);
