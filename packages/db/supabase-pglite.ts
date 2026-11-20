@@ -37,6 +37,20 @@ const SUPABASE_BOOTSTRAP = /* sql */ `
   grant usage on schema extensions to anon, authenticated, service_role;
   grant usage on schema auth to anon, authenticated, service_role;
 
+  -- Storage: just the buckets table, with the columns migrations set
+  -- (Supabase's has more). API roles get no grants here, as in Supabase,
+  -- where storage is reached through the Storage API.
+  create schema storage;
+  create table storage.buckets (
+    id text primary key,
+    name text not null unique,
+    public boolean default false,
+    file_size_limit bigint,
+    allowed_mime_types text[],
+    created_at timestamptz default now(),
+    updated_at timestamptz default now()
+  );
+
   create function auth.jwt() returns jsonb
   language sql stable
   as $$
