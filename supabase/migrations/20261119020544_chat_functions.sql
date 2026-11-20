@@ -153,6 +153,12 @@ grant execute on function public.save_chat_turn(uuid, uuid, text, text, text)
 -- Errors: 22023 invalid_parameter_value if p_count is null or not 1–50.
 -- ---------------------------------------------------------------------------
 
+-- Load pgvector's library before creating match_chunks. Until it is loaded,
+-- Postgres doesn't know hnsw.iterative_scan, and a non-superuser (Supabase's
+-- migration role) can't put an unknown setting in a function's SET clause:
+-- "42501 permission denied to set parameter". Any vector cast loads it.
+select '[1]'::extensions.vector;
+
 create function public.match_chunks(
   p_project_id uuid,
   p_embedding extensions.vector(1536),
