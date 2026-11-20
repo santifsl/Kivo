@@ -294,6 +294,25 @@ export type Database = {
           source_id: string
         }[]
       }
+      reserve_knowledge_source: {
+        Args: {
+          p_max_sources: number
+          p_project_id: string
+          p_status: string
+          p_title: string
+          p_type: string
+        }
+        Returns: {
+          created_at: string
+          id: string
+          project_id: string
+          reclaimed_storage_keys: string[]
+          status: string
+          storage_key: string
+          title: string
+          type: string
+        }[]
+      }
       save_chat_turn: {
         Args: {
           p_bot_reply: string
