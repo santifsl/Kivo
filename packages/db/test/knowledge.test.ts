@@ -51,7 +51,13 @@ async function sqlError(p: Promise<unknown>): Promise<{ code?: string; message: 
   throw new Error("expected the call to fail");
 }
 
-function reserve(projectId: string, title: string, type: string, status: string, max = LIMIT): Promise<Reserved> {
+function reserve(
+  projectId: string,
+  title: string,
+  type: string | null,
+  status: string | null,
+  max = LIMIT,
+): Promise<Reserved> {
   return s.as("service_role", null, async (tx) => {
     const { rows } = await tx.query<Reserved>(CALL, [projectId, title, type, status, max]);
     if (rows.length !== 1 || !rows[0]) throw new Error(`expected one row, got ${rows.length}`);
@@ -59,7 +65,8 @@ function reserve(projectId: string, title: string, type: string, status: string,
   });
 }
 
-const reserveFile = (projectId: string, title = "Doc", type = "pdf") => reserve(projectId, title, type, "uploading");
+const reserveFile = (projectId: string, title = "Doc", type = "pdf") =>
+  reserve(projectId, title, type, "uploading");
 
 async function countSources(projectId: string): Promise<number> {
   const { rows } = await s.db.query<{ n: number }>(
@@ -71,10 +78,10 @@ async function countSources(projectId: string): Promise<number> {
 
 /** Backdate a source's created_at by `hours`. */
 async function age(sourceId: string, hours: number): Promise<void> {
-  await s.db.query("update public.knowledge_sources set created_at = now() - $2::numeric * interval '1 hour' where id = $1", [
-    sourceId,
-    hours,
-  ]);
+  await s.db.query(
+    "update public.knowledge_sources set created_at = now() - $2::numeric * interval '1 hour' where id = $1",
+    [sourceId, hours],
+  );
 }
 
 describe("reserve_knowledge_source", () => {
@@ -91,16 +98,19 @@ describe("reserve_knowledge_source", () => {
     expect(await countSources(a.projectId)).toBe(2);
   });
 
-  it.each(["pdf", "md", "txt"])("gives a %s file the storage key <project_id>/<source_id>.<type>", async (type) => {
-    const r = await reserveFile(a.projectId, "Manual", type);
-    expect(r.status).toBe("uploading");
-    expect(r.storage_key).toBe(`${a.projectId}/${r.id}.${type}`);
-    const { rows } = await s.db.query<{ storage_key: string }>(
-      "select storage_key from public.knowledge_sources where id = $1",
-      [r.id],
-    );
-    expect(rows[0]?.storage_key).toBe(r.storage_key);
-  });
+  it.each(["pdf", "md", "txt"])(
+    "gives a %s file the storage key <project_id>/<source_id>.<type>",
+    async (type) => {
+      const r = await reserveFile(a.projectId, "Manual", type);
+      expect(r.status).toBe("uploading");
+      expect(r.storage_key).toBe(`${a.projectId}/${r.id}.${type}`);
+      const { rows } = await s.db.query<{ storage_key: string }>(
+        "select storage_key from public.knowledge_sources where id = $1",
+        [r.id],
+      );
+      expect(rows[0]?.storage_key).toBe(r.storage_key);
+    },
+  );
 
   it("limit 3 refuses the 4th source (any status counts) with KV005", async () => {
     await reserve(a.projectId, "Two", "text", "processing"); // seed's ready source is #1
@@ -125,7 +135,9 @@ describe("reserve_knowledge_source", () => {
   it("only counts this project's sources", async () => {
     await reserve(b.projectId, "B2", "text", "processing");
     await reserve(b.projectId, "B3", "text", "processing");
-    await expect(reserve(a.projectId, "A2", "text", "processing")).resolves.toMatchObject({ title: "A2" });
+    await expect(reserve(a.projectId, "A2", "text", "processing")).resolves.toMatchObject({
+      title: "A2",
+    });
   });
 
   it("reclaims uploading rows older than 2 h, returns their keys and frees the slots", async () => {
@@ -135,7 +147,9 @@ describe("reserve_knowledge_source", () => {
     await age(old2.id, 2.1);
     // Full: seed + 2 uploading.
     const r = await reserveFile(a.projectId, "New");
-    expect([...r.reclaimed_storage_keys].sort()).toEqual([old1.storage_key, old2.storage_key].sort());
+    expect([...r.reclaimed_storage_keys].sort()).toEqual(
+      [old1.storage_key, old2.storage_key].sort(),
+    );
     const { rows } = await s.db.query<{ id: string }>(
       "select id from public.knowledge_sources where project_id = $1 order by created_at",
       [a.projectId],
@@ -172,7 +186,9 @@ describe("reserve_knowledge_source", () => {
     expect(refused.code).toBe("KV005");
     // The old reservation is still there: the next call can reclaim it and return its key.
     expect(await countSources(a.projectId)).toBe(2);
-    expect((await reserveFile(a.projectId, "Later")).reclaimed_storage_keys).toEqual([old.storage_key]);
+    expect((await reserveFile(a.projectId, "Later")).reclaimed_storage_keys).toEqual([
+      old.storage_key,
+    ]);
   });
 
   it("raises KV004 for an unknown project", async () => {
@@ -186,14 +202,27 @@ describe("reserve_knowledge_source", () => {
     ["pdf", "processing"],
     ["pdf", "ready"],
     ["docx", "uploading"],
+    [null, "uploading"],
+    [null, "processing"],
+    ["pdf", null],
+    ["text", null],
+    [null, null],
   ])("refuses type %s with status %s (22023)", async (type, status) => {
     expect((await sqlError(reserve(a.projectId, "X", type, status))).code).toBe("22023");
     expect(await countSources(a.projectId)).toBe(1);
   });
 
+  it("refuses a null pair with 22023 even when the project is full", async () => {
+    await reserve(a.projectId, "Two", "text", "processing");
+    await reserve(a.projectId, "Three", "text", "processing");
+    expect((await sqlError(reserve(a.projectId, "X", "pdf", null))).code).toBe("22023");
+  });
+
   it.each([null, -1])("refuses p_max_sources %s (22023)", async (max) => {
     const err = await sqlError(
-      s.as("service_role", null, (tx) => tx.query(CALL, [a.projectId, "X", "text", "processing", max])),
+      s.as("service_role", null, (tx) =>
+        tx.query(CALL, [a.projectId, "X", "text", "processing", max]),
+      ),
     );
     expect(err.code).toBe("22023");
   });

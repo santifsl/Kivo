@@ -35,7 +35,9 @@
 --   KV005  'knowledge_limit: …'       the project already has p_max_sources
 --   22023  invalid_parameter_value    p_max_sources null or negative, or
 --                                     p_type/p_status not a valid pair
+--                                     (null included)
 --   23514  check_violation            blank or too long title
+--   23502  not_null_violation         null title
 -- Nothing is inserted or reclaimed when any of them is raised.
 -- ---------------------------------------------------------------------------
 
@@ -72,10 +74,12 @@ begin
       using errcode = 'invalid_parameter_value';
   end if;
 
-  if not (
+  -- IS NOT TRUE, not NOT: a null p_type or p_status makes the test null,
+  -- which must be refused here too.
+  if (
     (p_type = 'text' and p_status = 'processing')
     or (p_type in ('pdf', 'md', 'txt') and p_status = 'uploading')
-  ) then
+  ) is not true then
     raise exception 'p_type and p_status must be text/processing or a file type/uploading'
       using errcode = 'invalid_parameter_value';
   end if;
