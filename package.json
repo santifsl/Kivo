@@ -16,6 +16,7 @@
     "format:check": "prettier --check .",
     "e2e:phase2": "node e2e/phase2.ts",
     "e2e:phase3": "node e2e/phase3.ts",
+    "e2e:phase4": "node e2e/phase4.ts",
     "e2e:typecheck": "tsc -p e2e"
   },
   "devDependencies": {
