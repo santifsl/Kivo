@@ -1,4 +1,5 @@
 import { widgetConfigQuerySchema, type WidgetConfigResponse } from "@kivo/shared";
+import { protectConfig } from "../../../../lib/arcjet/protect";
 import { getWidgetConfig } from "../../../../lib/widget-config/get-widget-config";
 import {
   WIDGET_CONFIG_HEADERS,
@@ -8,12 +9,16 @@ import {
 
 // GET /api/widget/config?key=pk_… — public, any origin (docs/project.md §6.5, §8).
 // Returns only the plan-applied config: never the owner id or the plan.
+// Arcjet limits each public key + IP to 60 requests a minute (§9 "Cost abuse").
 
 export async function GET(request: Request): Promise<Response> {
   const query = widgetConfigQuerySchema.safeParse(
     Object.fromEntries(new URL(request.url).searchParams),
   );
   if (!query.success) return widgetErrorResponse("invalid_input", "Invalid widget key.");
+
+  const protection = await protectConfig(request, { publicKey: query.data.key });
+  if (!protection.allowed) return widgetErrorResponse("rate_limited", "Too many requests.");
 
   try {
     const config = await getWidgetConfig(query.data.key);
