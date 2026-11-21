@@ -36,12 +36,15 @@ async function setStatus(
   projectId: string,
   status: "ready" | "failed",
 ) {
-  const { error } = await client
+  const { data, error } = await client
     .from("knowledge_sources")
     .update({ status })
     .eq("id", sourceId)
-    .eq("project_id", projectId);
+    .eq("project_id", projectId)
+    .eq("status", "processing")
+    .select("id");
   if (error) throw new Error(`Couldn't set the source status: ${error.code}`);
+  return Boolean(data?.length);
 }
 
 /** A loggable description of an error that never includes the source's text. */
@@ -95,8 +98,7 @@ export async function processSource(
       if (error) throw new Error(`Couldn't insert chunks: ${error.code}`);
     }
 
-    await setStatus(client, sourceId, projectId, "ready");
-    return "ready";
+    return (await setStatus(client, sourceId, projectId, "ready")) ? "ready" : "failed";
   } catch (err) {
     console.error(`[knowledge] Processing failed for source ${sourceId}: ${errorLabel(err)}`);
     // Each step on its own, so a failed chunk delete still marks the source failed.

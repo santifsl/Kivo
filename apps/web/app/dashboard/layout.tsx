@@ -3,6 +3,7 @@ import { UserButton } from "@clerk/nextjs";
 import { auth } from "@clerk/nextjs/server";
 import { APP_NAME } from "@kivo/shared";
 import { ensureAccount } from "@/lib/accounts/ensure-account";
+import { PosthogClerkOwner } from "@/lib/posthog/clerk-owner";
 import { AppClerkProvider } from "@/components/auth/app-clerk-provider";
 import { MobileNav } from "@/components/dashboard/mobile-nav";
 import { PlanBadge } from "@/components/dashboard/plan-badge";
@@ -18,6 +19,7 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
 
   return (
     <AppClerkProvider>
+      <PosthogClerkOwner />
       <div className="bg-glow min-h-dvh text-ink">
         <div className="mx-auto flex max-w-7xl gap-4 p-4 md:gap-6 md:p-6">
           <aside className="sticky top-6 hidden h-[calc(100dvh-3rem)] w-60 shrink-0 md:block">

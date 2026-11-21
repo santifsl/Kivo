@@ -14,6 +14,7 @@ import {
   removeStorageObjects,
 } from "../../../../../../lib/knowledge/sources";
 import { readUpload, UploadRefusedError } from "../../../../../../lib/knowledge/upload";
+import { captureOwnerEvent } from "../../../../../../lib/posthog/owner-events";
 import {
   internalError,
   ownerError,
@@ -90,7 +91,11 @@ export async function POST(request: Request, context: Context): Promise<Response
       throw err;
     }
 
-    after(() => processSource(source.id, projectId, text));
+    after(async () => {
+      if ((await processSource(source.id, projectId, text)) === "ready") {
+        await captureOwnerEvent(session.userId, "knowledge_added", projectId);
+      }
+    });
 
     const body: FinalizeUploadResponse = { source };
     return ownerJson(body);

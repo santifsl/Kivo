@@ -5,6 +5,7 @@ import {
 } from "@kivo/shared";
 import { ensureAccount } from "../../../lib/accounts/ensure-account";
 import { getOwnerPlan } from "../../../lib/accounts/get-owner-plan";
+import { scheduleOwnerEvent } from "../../../lib/posthog/owner-events";
 import { internalError, ownerError, ownerJson, readJson } from "../../../lib/projects/http";
 import { requireOwnerSession } from "../../../lib/projects/owner-session";
 import { createProject, listProjects, ProjectLimitError } from "../../../lib/projects/projects";
@@ -45,6 +46,7 @@ export async function POST(request: Request): Promise<Response> {
     if (!plan) return internalError("api/projects POST", "couldn't read the owner's plan");
 
     const project = await createProject(session.userId, input.data.name, plan);
+    scheduleOwnerEvent(session.userId, "project_created", project.id);
     const body: CreateProjectResponse = { project };
     return ownerJson(body, 201);
   } catch (err) {

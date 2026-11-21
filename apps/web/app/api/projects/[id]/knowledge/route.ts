@@ -12,6 +12,7 @@ import {
   removeStorageObjects,
   reserveTextSource,
 } from "../../../../../lib/knowledge/sources";
+import { captureOwnerEvent } from "../../../../../lib/posthog/owner-events";
 import { internalError, ownerError, ownerJson, readJson } from "../../../../../lib/projects/http";
 import { requireOwnerSession } from "../../../../../lib/projects/owner-session";
 import { getOwnedProject } from "../../../../../lib/projects/projects";
@@ -68,7 +69,11 @@ export async function POST(request: Request, context: Context): Promise<Response
     }
 
     const content = input.data.content;
-    after(() => processSource(source.id, projectId, content));
+    after(async () => {
+      if ((await processSource(source.id, projectId, content)) === "ready") {
+        await captureOwnerEvent(session.userId, "knowledge_added", projectId);
+      }
+    });
 
     const body: CreateTextSourceResponse = { source };
     return ownerJson(body, 201);

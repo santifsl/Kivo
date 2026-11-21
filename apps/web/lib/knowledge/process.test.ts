@@ -26,6 +26,7 @@ const vector = (seed: number) => Array.from({ length: 1536 }, (_, i) => (i === 0
 
 let pg: ReturnType<typeof fakePostgrest>;
 let logged: string[];
+let statusRows: { id: string }[];
 
 beforeEach(() => {
   vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://project-ref.supabase.co");
@@ -34,7 +35,8 @@ beforeEach(() => {
   vi.stubGlobal("fetch", pg.fetchMock);
   pg.on("DELETE", "/rest/v1/knowledge_chunks", { status: 200, body: null });
   pg.on("POST", "/rest/v1/knowledge_chunks", { status: 201, body: null });
-  pg.on("PATCH", "/rest/v1/knowledge_sources", { status: 200, body: null });
+  statusRows = [{ id: SOURCE }];
+  pg.on("PATCH", "/rest/v1/knowledge_sources", () => ({ status: 200, body: statusRows }));
   embedMock.mockReset();
   embedMock.mockImplementation(async (texts) => texts.map((_, i) => vector(i)));
   logged = [];
@@ -63,6 +65,7 @@ function expectScoped() {
   for (const r of pg.to("/rest/v1/knowledge_sources", "PATCH")) {
     expect(r.params.get("id")).toBe(`eq.${SOURCE}`);
     expect(r.params.get("project_id")).toBe(`eq.${PROJECT}`);
+    expect(r.params.get("status")).toBe("eq.processing");
   }
   for (const r of pg.requests) expect(r.headers.get("apikey")).toBe(SECRET);
 }
@@ -98,6 +101,13 @@ describe("processSource", () => {
       "POST /rest/v1/knowledge_chunks",
       "PATCH /rest/v1/knowledge_sources",
     ]);
+  });
+
+  it("does not report ready if the source no longer matches the processing status", async () => {
+    statusRows = [];
+
+    expect(await processSource(SOURCE, PROJECT, "Short text.")).toBe("failed");
+    expect(statuses()).toEqual(["ready"]);
   });
 
   it("inserts many chunks in batches", async () => {

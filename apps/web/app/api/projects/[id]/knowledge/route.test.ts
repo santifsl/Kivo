@@ -8,6 +8,11 @@ import { fakePostgrest, pgError } from "../../../../../lib/projects/fake-postgre
 
 vi.mock("server-only", () => ({}));
 
+const captureImmediate = vi.hoisted(() => vi.fn());
+vi.mock("../../../../../lib/posthog/server", () => ({
+  getPosthogServer: () => ({ captureImmediate }),
+}));
+
 let userId: string | null = "user_a";
 vi.mock("@clerk/nextjs/server", () => ({
   auth: async () => ({ userId, getToken: async () => (userId ? `token_${userId}` : null) }),
@@ -44,6 +49,7 @@ const CREATED = "2026-11-21T00:00:00+00:00";
 let pg: ReturnType<typeof fakePostgrest>;
 
 beforeEach(() => {
+  captureImmediate.mockReset();
   userId = "user_a";
   pending.length = 0;
   vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://project-ref.supabase.co");
@@ -120,7 +126,7 @@ function reserves(reclaimed: string[] = []) {
 function processingWrites() {
   pg.on("DELETE", "/rest/v1/knowledge_chunks", { body: null });
   pg.on("POST", "/rest/v1/knowledge_chunks", { status: 201, body: null });
-  pg.on("PATCH", "/rest/v1/knowledge_sources", { body: null });
+  pg.on("PATCH", "/rest/v1/knowledge_sources", { body: [{ id: SOURCE }] });
 }
 
 const serviceRequests = () => pg.requests.filter((r) => r.headers.get("apikey") === SECRET);
@@ -233,6 +239,7 @@ describe("POST /api/projects/:id/knowledge", () => {
     // Nothing embedded before the response.
     expect(embedMock).not.toHaveBeenCalled();
     expect(pending).toHaveLength(1);
+    expect(captureImmediate).not.toHaveBeenCalled();
 
     await runAfter();
     expect(embedMock).toHaveBeenCalledWith([TEXT.content]);
@@ -243,6 +250,11 @@ describe("POST /api/projects/:id/knowledge", () => {
     const [status] = pg.to("/rest/v1/knowledge_sources", "PATCH");
     expect(status?.body).toEqual({ status: "ready" });
     expect(status?.params.get("id")).toBe(`eq.${SOURCE}`);
+    expect(captureImmediate).toHaveBeenCalledExactlyOnceWith({
+      distinctId: "user_a",
+      event: "knowledge_added",
+      properties: { project_id: PROJECT },
+    });
   });
 
   it("processing failure → failed, no chunks", async () => {
@@ -257,6 +269,7 @@ describe("POST /api/projects/:id/knowledge", () => {
     expect(pg.to("/rest/v1/knowledge_sources", "PATCH").map((r) => r.body)).toEqual([
       { status: "failed" },
     ]);
+    expect(captureImmediate).not.toHaveBeenCalled();
   });
 
   it("deletes reclaimed upload files through the Storage API", async () => {

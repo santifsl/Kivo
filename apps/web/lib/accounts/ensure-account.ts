@@ -1,4 +1,5 @@
 import "server-only";
+import { scheduleOwnerEvent } from "../posthog/owner-events";
 import { createServiceClient, type ServiceClient } from "../supabase/service";
 
 /**
@@ -18,9 +19,12 @@ export async function ensureAccount(
 ): Promise<void> {
   if (!userId) throw new Error("ensureAccount needs a Clerk user ID.");
 
-  const { error } = await client
+  const { data, error } = await client
     .from("accounts")
-    .upsert({ clerk_user_id: userId }, { onConflict: "clerk_user_id", ignoreDuplicates: true });
+    .upsert({ clerk_user_id: userId }, { onConflict: "clerk_user_id", ignoreDuplicates: true })
+    .select("clerk_user_id");
 
   if (error) throw new Error(`Couldn't create the account row: ${error.message}`);
+  // RETURNING is empty on conflict, including concurrent dashboard/API calls.
+  if (data?.length) scheduleOwnerEvent(userId, "signed_up");
 }
