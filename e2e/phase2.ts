@@ -13,11 +13,17 @@
 // header is added to every request to the app, including the widget's
 // cross-origin ones from the demo page. Not part of CI: it needs a live app.
 //
+// Sign-up needs the app's Clerk keys (NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY,
+// CLERK_SECRET_KEY): Clerk's bot protection blocks automated browsers, so the
+// script gets a Clerk Testing Token (@clerk/testing) and adds it to the
+// browser's Clerk requests, the way Clerk documents for E2E tests.
+//
 // Output (screenshots + log) goes to e2e/output/<timestamp>/.
 
 import { createServer, type Server } from "node:http";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
+import { clerkSetup, setupClerkTestingToken } from "@clerk/testing/playwright";
 import { chromium, type BrowserContext, type Page } from "playwright";
 
 const DEMO_PORT = 5500;
@@ -131,7 +137,14 @@ async function signUp(page: Page, email: string): Promise<void> {
   await page.locator('input[name="emailAddress"]').fill(email);
   const password = page.locator('input[name="password"]');
   if (await password.isVisible()) await password.fill(`E2e-${crypto.randomUUID()}`);
+  // Clerk sends the code with a prepare_verification call; typing before it
+  // finishes gets "You need to send a verification code before attempting to verify".
+  const prepared = page.waitForResponse((r) => r.url().includes("/prepare_verification"), {
+    timeout: TIMEOUT_MS,
+  });
   await page.getByRole("button", { name: "Continue", exact: true }).click();
+  const prepare = await prepared;
+  check(prepare.ok(), `Clerk couldn't send the code: HTTP ${prepare.status()}`);
 
   // Clerk's one-time code: one input that spreads the digits across boxes.
   const code = page.locator('input[name="code"], input[autocomplete="one-time-code"]').first();
@@ -308,6 +321,10 @@ async function main(): Promise<number> {
       snippet = `<script src="${appOrigin}/widget.js" data-key="${existingKey}" async></script>`;
       log(`--key given: skipping sign-up and project steps. Snippet: ${snippet}`);
     } else {
+      await step("get a Clerk testing token", app, async () => {
+        await clerkSetup();
+        await setupClerkTestingToken({ context });
+      });
       await step(`sign up as ${email}`, app, () => signUp(app, email));
       await step(`create project "${projectName}"`, app, async () => {
         await createProject(app, projectName);
