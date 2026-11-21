@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
-import type { ReactNode } from "react";
+import { Suspense, type ReactNode } from "react";
 import { APP_NAME } from "@kivo/shared";
+import { PosthogRouteObserver } from "./providers";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -12,7 +13,12 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <html lang="en">
-      <body className="antialiased">{children}</body>
+      <body className="antialiased">
+        <Suspense fallback={null}>
+          <PosthogRouteObserver />
+        </Suspense>
+        {children}
+      </body>
     </html>
   );
 }
