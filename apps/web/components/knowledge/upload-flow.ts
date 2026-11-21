@@ -26,9 +26,9 @@ const DEFAULT_API: UploadApi = {
 /**
  * Check in the browser → upload-url (reserves the source) → PUT straight to
  * Storage → finalize. Reports each step through `dispatch`. A file the
- * browser refuses never reaches the server. If the PUT fails, the reserved
- * source is deleted so it doesn't hold a slot. A refusal at finalize shows
- * the server's message (the server already deleted the file).
+ * browser refuses never reaches the server. If the PUT fails, try to delete
+ * the reservation and let the owner retry cleanup if it fails. A refusal at
+ * finalize shows the server's message (the server already deleted the file).
  */
 export async function uploadFile(
   projectId: string,
@@ -59,8 +59,19 @@ export async function uploadFile(
     dispatch({ type: "uploadProgressed", progress }),
   );
   if (!put.ok) {
-    await api.deleteSource(source.id);
-    dispatch({ type: "uploadFailed", error: put.error });
+    const cleanup = await api.deleteSource(source.id);
+    if (cleanup.ok || cleanup.error.code === "not_found") {
+      dispatch({ type: "uploadFailed", error: put.error });
+    } else {
+      dispatch({
+        type: "uploadFailed",
+        error: {
+          code: "internal",
+          message: "The upload didn't finish. Delete the unfinished source below and try again.",
+        },
+        reservedSource: source,
+      });
+    }
     return;
   }
 

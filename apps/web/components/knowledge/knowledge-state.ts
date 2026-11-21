@@ -39,7 +39,7 @@ export type KnowledgeAction =
   | { type: "uploadProgressed"; progress: number }
   | { type: "uploadFinalizing" }
   | { type: "uploadSucceeded"; source: KnowledgeSource }
-  | { type: "uploadFailed"; error: ApiFailure }
+  | { type: "uploadFailed"; error: ApiFailure; reservedSource?: KnowledgeSource }
   | { type: "deleteOpened"; source: KnowledgeSource }
   | { type: "deleteClosed" }
   | { type: "deleteStarted" }
@@ -140,6 +140,9 @@ export function knowledgeReducer(state: KnowledgeState, action: KnowledgeAction)
         pending: null,
         upload: { phase: "idle" },
         uploadError: action.error.message,
+        sources: action.reservedSource
+          ? withSource(state.sources, action.reservedSource)
+          : state.sources,
       };
 
     case "deleteOpened":

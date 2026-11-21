@@ -388,6 +388,22 @@ describe("upload flow", () => {
     expect(calls).toContain(`delete ${reserved.id}`);
     expect(calls.some((c) => c.startsWith("finalize"))).toBe(false);
     expect(s.uploadError).toBe("The upload didn't finish.");
+    expect(s.sources).toEqual([]);
+  });
+
+  it("keeps the unfinished source available for deletion when upload cleanup fails", async () => {
+    const error = { code: "internal" as const, message: "Couldn't reach the server." };
+    const { api, reserved } = fakeUploadApi({
+      upload: async () => ({ ok: false, error }),
+      deleteSource: async () => ({ ok: false, error }),
+    });
+    let s = state([]);
+    await uploadFile(PROJECT, file("a.pdf", 10), (a) => (s = knowledgeReducer(s, a)), api);
+    const html = render(s);
+    expect(s.sources).toEqual([reserved]);
+    expect(s.pending).toBeNull();
+    expect(html).toContain("Delete the unfinished source below and try again.");
+    expect(html).toContain(`aria-label="Delete ${reserved.title}"`);
   });
 
   it("uploadToSignedUrl PUTs the raw file with its content type and reports progress", async () => {
