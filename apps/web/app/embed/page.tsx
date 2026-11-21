@@ -19,6 +19,7 @@ function first(value: string | string[] | undefined): string | null {
 export default async function EmbedPage({ searchParams }: { searchParams: SearchParams }) {
   const params = await searchParams;
   const key = publicKeySchema.safeParse(first(params[EMBED_QUERY.key]));
+  const publicKey = key.success ? key.data : null;
   const hostOrigin = parseHostOrigin(first(params[EMBED_QUERY.origin]));
-  return <EmbedApp publicKey={key.success ? key.data : null} hostOrigin={hostOrigin} />;
+  return <EmbedApp key={publicKey} publicKey={publicKey} hostOrigin={hostOrigin} />;
 }
