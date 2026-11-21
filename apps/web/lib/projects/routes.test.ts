@@ -320,9 +320,49 @@ describe("DELETE /api/projects/:id", () => {
     expectOwnerClient("/rest/v1/projects");
   });
 
-  it("another owner's project (RLS deletes nothing) → 404", async () => {
+  it("another owner's project (RLS deletes nothing) → 404, no Storage call", async () => {
     pg.on("DELETE", "/rest/v1/projects", { body: [] });
     await expectError(await del(OTHER_ID), 404, "not_found");
+    expect(pg.requests.some((r) => r.path.startsWith("/storage/"))).toBe(false);
+  });
+
+  it("then removes every knowledge file under <projectId>/ with the service client", async () => {
+    pg.on("DELETE", "/rest/v1/projects", { body: [{ id: ID }] });
+    const files = [
+      { id: "f1", name: "aaaa.pdf" },
+      { id: "f2", name: "bbbb.md" },
+    ];
+    let listed = 0;
+    pg.on("POST", "/storage/v1/object/list/knowledge", () => ({ body: listed++ ? [] : files }));
+    pg.on("DELETE", "/storage/v1/object/knowledge", { body: [] });
+
+    const res = await del(ID);
+    expect(await res.json()).toEqual({ ok: true });
+
+    const [list] = pg.to("/storage/v1/object/list/knowledge");
+    expect(list?.body).toEqual(expect.objectContaining({ prefix: ID }));
+    expect(list?.headers.get("apikey")).toBe(SECRET);
+    const [remove] = pg.to("/storage/v1/object/knowledge", "DELETE");
+    expect(remove?.body).toEqual({ prefixes: [`${ID}/aaaa.pdf`, `${ID}/bbbb.md`] });
+    expect(remove?.headers.get("apikey")).toBe(SECRET);
+    // The owner-client delete came first: it is the ownership proof.
+    expect(pg.requests[0]?.path).toBe("/rest/v1/projects");
+  });
+
+  it("with no files: lists once, removes nothing", async () => {
+    pg.on("DELETE", "/rest/v1/projects", { body: [{ id: ID }] });
+    pg.on("POST", "/storage/v1/object/list/knowledge", { body: [] });
+    expect((await del(ID)).status).toBe(200);
+    expect(pg.to("/storage/v1/object/knowledge", "DELETE")).toHaveLength(0);
+  });
+
+  it("a Storage failure logs and still returns { ok: true }", async () => {
+    pg.on("DELETE", "/rest/v1/projects", { body: [{ id: ID }] });
+    pg.on("POST", "/storage/v1/object/list/knowledge", { status: 500, body: { message: "down" } });
+    const res = await del(ID);
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ ok: true });
+    expect(console.error).toHaveBeenCalled();
   });
 
   it("database error → 500 without the error text", async () => {
