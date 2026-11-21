@@ -1,5 +1,5 @@
-// The project page's tabs, in order. Later phases add Knowledge,
-// Conversations and Customize by adding an entry here and its page under
+// The project page's tabs, in order. Later phases add Conversations and
+// Customize by adding an entry here and its page under
 // app/dashboard/projects/[id]/<segment>/.
 
 export type ProjectTab = {
@@ -8,11 +8,12 @@ export type ProjectTab = {
   segment: string;
 };
 
+const KNOWLEDGE_TAB: ProjectTab = { label: "Knowledge", segment: "knowledge" };
 const INSTALL_TAB: ProjectTab = { label: "Install", segment: "install" };
 
-export const PROJECT_TABS: readonly ProjectTab[] = [INSTALL_TAB];
+export const PROJECT_TABS: readonly ProjectTab[] = [KNOWLEDGE_TAB, INSTALL_TAB];
 
-/** Where /dashboard/projects/[id] redirects. */
+/** Where /dashboard/projects/[id] redirects. Install for now (P3K-T07). */
 export const DEFAULT_PROJECT_TAB: ProjectTab = INSTALL_TAB;
 
 /** /dashboard/projects/<id> */
