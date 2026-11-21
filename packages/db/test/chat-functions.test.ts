@@ -197,6 +197,48 @@ describe("save_chat_turn", () => {
 
 // ---------------------------------------------------------------------------
 
+describe("save_chat_turn_with_first_chat", () => {
+  const save = (projectId: string, conversationId: string | null = null, reply = "A") =>
+    one<{ conversation_id: string; first_chat_at: string | null }>(
+      "select conversation_id, first_chat_at::text from public.save_chat_turn_with_first_chat($1, $2, 'visitor-9', 'Q', $3)",
+      [projectId, conversationId, reply],
+    );
+
+  it("returns the stored first reply timestamp only once across conversations", async () => {
+    // The fixture has a visitor-only conversation and does not yet have a saved reply.
+    const first = await save(a.projectId, a.conversationId);
+    expect(first.conversation_id).toBe(a.conversationId);
+    expect(first.first_chat_at).not.toBeNull();
+    expect(first.first_chat_at).toBe(
+      await scalar<string>(
+        "select created_at::text as v from public.messages where conversation_id = $1 and role = 'bot'",
+        [first.conversation_id],
+      ),
+    );
+
+    const subsequent = await save(a.projectId);
+    expect(subsequent.conversation_id).not.toBe(first.conversation_id);
+    expect(subsequent.first_chat_at).toBeNull();
+    expect((await save(b.projectId)).first_chat_at).not.toBeNull();
+  });
+
+  it("recognizes chat history written by the original RPC", async () => {
+    await one("select public.save_chat_turn($1, null, 'old-visitor', 'Q', 'A')", [a.projectId]);
+    expect((await save(a.projectId)).first_chat_at).toBeNull();
+  });
+
+  it("leaves the first turn available after a save rolls back", async () => {
+    const count = () =>
+      scalar<number>("select count(*)::int as v from public.conversations where project_id = $1", [
+        a.projectId,
+      ]);
+    const before = await count();
+    expect((await sqlError(save(a.projectId, null, ""))).code).toBe("23514");
+    expect(await count()).toBe(before);
+    expect((await save(a.projectId)).first_chat_at).not.toBeNull();
+  });
+});
+
 describe("match_chunks", () => {
   /** A unit-ish vector pointing mostly along axis `i` (cosine-distinct per axis). */
   function axis(i: number, mix = 0): string {
@@ -359,6 +401,15 @@ describe("privileges", () => {
       sig: "public.save_chat_turn(uuid, uuid, text, text, text)",
       call: (r: OwnerRows) =>
         ["select public.save_chat_turn($1, null, 'v', 'q', 'a')", [r.projectId]] as const,
+    },
+    {
+      name: "save_chat_turn_with_first_chat",
+      sig: "public.save_chat_turn_with_first_chat(uuid, uuid, text, text, text)",
+      call: (r: OwnerRows) =>
+        [
+          "select * from public.save_chat_turn_with_first_chat($1, null, 'v', 'q', 'a')",
+          [r.projectId],
+        ] as const,
     },
     {
       name: "match_chunks",

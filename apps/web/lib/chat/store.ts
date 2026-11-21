@@ -24,6 +24,7 @@ function fail(step: string, error: { code?: string }): never {
 
 export interface ChatProject {
   id: string;
+  ownerId: string;
   /** The owner's plan, read on the server. */
   plan: Plan;
 }
@@ -35,7 +36,7 @@ export async function findProjectByKey(
 ): Promise<ChatProject | null> {
   const { data, error } = await client
     .from("projects")
-    .select("id, accounts(plan)")
+    .select("id, owner_id, accounts(plan)")
     .eq("public_key", publicKey)
     .maybeSingle();
   if (error) fail("findProjectByKey", error);
@@ -44,7 +45,7 @@ export async function findProjectByKey(
   const plan = planSchema.safeParse(data.accounts?.plan);
   if (!plan.success)
     console.error("[chat] Owner's plan is missing or unknown; treating it as free.");
-  return { id: data.id, plan: plan.success ? plan.data : "free" };
+  return { id: data.id, ownerId: data.owner_id, plan: plan.success ? plan.data : "free" };
 }
 
 /** Whether `conversationId` is a conversation of `projectId`. */
@@ -102,7 +103,12 @@ export class ConversationGoneError extends Error {
   }
 }
 
-/** Saves the visitor message and the reply; returns the conversation id (new when none was given). */
+function failSave(error: { code?: string }): never {
+  if (error.code === "KV003") throw new ConversationGoneError();
+  fail("saveChatTurn", error);
+}
+
+/** Saves both messages and returns the timestamp only for the project's first reply. */
 export async function saveChatTurn(
   client: ServiceClient,
   turn: {
@@ -112,8 +118,8 @@ export async function saveChatTurn(
     message: string;
     reply: string;
   },
-): Promise<string> {
-  const { data, error } = await client.rpc("save_chat_turn", {
+): Promise<{ conversationId: string; firstChatAt: string | null }> {
+  const args = {
     p_project_id: turn.projectId,
     // SQL null creates a conversation. The generated types mark function
     // arguments as non-null, so the null needs a cast.
@@ -121,10 +127,19 @@ export async function saveChatTurn(
     p_visitor_id: turn.visitorId,
     p_visitor_message: turn.message,
     p_bot_reply: turn.reply,
-  });
-  if (error) {
-    if (error.code === "KV003") throw new ConversationGoneError();
-    fail("saveChatTurn", error);
+  };
+  const tracked = await client.rpc("save_chat_turn_with_first_chat", args).single();
+  if (!tracked.error) {
+    return {
+      conversationId: tracked.data.conversation_id,
+      firstChatAt: tracked.data.first_chat_at ?? null,
+    };
   }
-  return data;
+  // The PR preview can use the old RPC until the new migration reaches dev.
+  // Only a missing RPC is safe to retry as the old operation.
+  if (tracked.error.code !== "PGRST202") failSave(tracked.error);
+
+  const { data, error } = await client.rpc("save_chat_turn", args);
+  if (error) failSave(error);
+  return { conversationId: data, firstChatAt: null };
 }

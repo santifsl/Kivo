@@ -16,6 +16,7 @@ export function getPosthogServer(): PostHog | undefined {
       flushAt: 1,
       flushInterval: 0,
       requestTimeout: 1_000,
+      captureAiRequestTimeoutMs: 1_000,
       fetchRetryCount: 0,
     });
     return client;

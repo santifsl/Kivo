@@ -14,6 +14,13 @@ function answers(output_text: string, status = "completed", reason: string | nul
     output_text,
     status,
     incomplete_details: reason ? { reason } : null,
+    model: "gpt-6-luna-2026-10-01",
+    service_tier: "default",
+    usage: {
+      input_tokens: 123,
+      input_tokens_details: { cached_tokens: 40 },
+      output_tokens: 23,
+    },
   });
 }
 
@@ -24,7 +31,20 @@ beforeEach(() => {
 describe("generateAnswer", () => {
   it("sends the built prompt to CHAT_MODEL with no reasoning, a low temperature and a short cap", async () => {
     answers("  We open at 9.  ");
-    await expect(generateAnswer("When?", ["We open at 9."])).resolves.toBe("We open at 9.");
+    const now = vi.spyOn(performance, "now").mockReturnValueOnce(1000).mockReturnValueOnce(1125);
+    try {
+      await expect(generateAnswer("When?", ["We open at 9."])).resolves.toEqual({
+        reply: "We open at 9.",
+        generation: {
+          model: "gpt-6-luna-2026-10-01",
+          serviceTier: "default",
+          latencySeconds: 0.125,
+          usage: { input: 123, cachedInput: 40, output: 23 },
+        },
+      });
+    } finally {
+      now.mockRestore();
+    }
 
     const { instructions, input } = buildChatPrompt("When?", ["We open at 9."]);
     expect(create).toHaveBeenCalledTimes(1);
@@ -42,7 +62,7 @@ describe("generateAnswer", () => {
 
   it('normalizes the fixed "I don\'t know" text', async () => {
     answers(`“${I_DONT_KNOW_REPLY}”`);
-    await expect(generateAnswer("Q", ["P"])).resolves.toBe(I_DONT_KNOW_REPLY);
+    await expect(generateAnswer("Q", ["P"])).resolves.toMatchObject({ reply: I_DONT_KNOW_REPLY });
   });
 
   it("no text (cut off at the token cap): throws ChatModelError", async () => {
