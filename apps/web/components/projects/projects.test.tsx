@@ -258,13 +258,15 @@ describe("projects API client", () => {
 describe("project tabs", () => {
   const id = project().id;
 
-  it("Knowledge then Install, with Install still the default", () => {
-    expect(PROJECT_TABS.map((t) => t.segment)).toEqual(["knowledge", "install"]);
+  it("lists Knowledge, Conversations, and Install, with Install as the default", () => {
+    expect(PROJECT_TABS.map((t) => t.segment)).toEqual(["knowledge", "conversations", "install"]);
     expect(DEFAULT_PROJECT_TAB.segment).toBe("install");
   });
 
   it.each([
     [`/dashboard/projects/${id}/install`, "install"],
+    [`/dashboard/projects/${id}/conversations`, "conversations"],
+    [`/dashboard/projects/${id}/conversations/${id}`, "conversations"],
     [`/dashboard/projects/${id}/install/`, "install"],
     [`/dashboard/projects/${id}`, null],
     [`/dashboard/projects/${id}/installx`, null],
