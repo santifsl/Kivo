@@ -20,7 +20,6 @@ export type Database = {
           created_at: string
           plan: string
         }
-        ComputedFields: never
         Insert: {
           clerk_user_id: string
           created_at?: string
@@ -40,7 +39,6 @@ export type Database = {
           project_id: string
           visitor_id: string
         }
-        ComputedFields: never
         Insert: {
           created_at?: string
           id?: string
@@ -71,7 +69,6 @@ export type Database = {
           project_id: string
           source_id: string
         }
-        ComputedFields: never
         Insert: {
           content: string
           embedding: string
@@ -113,7 +110,6 @@ export type Database = {
           title: string
           type: string
         }
-        ComputedFields: never
         Insert: {
           created_at?: string
           id?: string
@@ -150,7 +146,6 @@ export type Database = {
           id: string
           role: string
         }
-        ComputedFields: never
         Insert: {
           body: string
           conversation_id: string
@@ -185,7 +180,6 @@ export type Database = {
           period_start: string
           public_key: string
         }
-        ComputedFields: never
         Insert: {
           created_at?: string
           id?: string
@@ -224,7 +218,6 @@ export type Database = {
           project_id: string
           show_badge: boolean
         }
-        ComputedFields: never
         Insert: {
           animation: string
           button_color: string
