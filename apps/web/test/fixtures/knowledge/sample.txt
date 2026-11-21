@@ -1,0 +1,2 @@
+﻿Plain text FAQ.
+	Tabs	and  spaces collapse.
