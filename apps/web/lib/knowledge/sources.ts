@@ -1,5 +1,7 @@
 import "server-only";
 import {
+  type KnowledgeFileType,
+  type KnowledgeSourceType,
   knowledgeSourceStatusSchema,
   knowledgeSourceTypeSchema,
   PLAN_LIMITS,
@@ -59,28 +61,21 @@ export function toKnowledgeSource(row: SourceRow): KnowledgeSource {
   };
 }
 
-/**
- * Reserves a pasted-text source (`processing`) under `plan`'s limit.
- * Call it only after the route has checked ownership, with `plan` read from
- * the database (§9 "Plan bypass", "Tenant leak").
- *
- * Returns the new source and the storage keys of stale upload reservations
- * the function reclaimed (the caller deletes those files).
- *
- * @throws KnowledgeLimitError at the limit; ProjectGoneError if the project is gone; Error otherwise.
- */
-export async function reserveTextSource(
+type Reservation = { source: KnowledgeSource; reclaimedStorageKeys: string[] };
+
+async function reserve(
   client: ServiceClient,
   projectId: string,
   title: string,
   plan: Plan,
-): Promise<{ source: KnowledgeSource; reclaimedStorageKeys: string[] }> {
+  type: KnowledgeSourceType,
+): Promise<Reservation> {
   const { data, error } = await client
     .rpc("reserve_knowledge_source", {
       p_project_id: projectId,
       p_title: title,
-      p_type: "text",
-      p_status: "processing",
+      p_type: type,
+      p_status: type === "text" ? "processing" : "uploading",
       p_max_sources: PLAN_LIMITS[plan].knowledgeSources,
     })
     .single();
@@ -94,6 +89,117 @@ export async function reserveTextSource(
     source: toKnowledgeSource(data),
     reclaimedStorageKeys: data.reclaimed_storage_keys ?? [],
   };
+}
+
+/**
+ * Reserves a pasted-text source (`processing`) under `plan`'s limit.
+ * Call it only after the route has checked ownership, with `plan` read from
+ * the database (§9 "Plan bypass", "Tenant leak").
+ *
+ * Returns the new source and the storage keys of stale upload reservations
+ * the function reclaimed (the caller deletes those files).
+ *
+ * @throws KnowledgeLimitError at the limit; ProjectGoneError if the project is gone; Error otherwise.
+ */
+export function reserveTextSource(
+  client: ServiceClient,
+  projectId: string,
+  title: string,
+  plan: Plan,
+): Promise<Reservation> {
+  return reserve(client, projectId, title, plan, "text");
+}
+
+/**
+ * Reserves a file source (`uploading`, storage key `<project>/<source>.<type>`)
+ * under `plan`'s limit. Same rules and errors as `reserveTextSource`.
+ */
+export function reserveFileSource(
+  client: ServiceClient,
+  projectId: string,
+  title: string,
+  plan: Plan,
+  type: KnowledgeFileType,
+): Promise<Reservation> {
+  return reserve(client, projectId, title, plan, type);
+}
+
+/**
+ * Claims an uploaded source for processing, once: `uploading` → `processing`
+ * in one UPDATE … WHERE status = 'uploading', so of two concurrent finalize
+ * calls only one gets the row. `null` when there is no such upload waiting
+ * (unknown id, another project, already finalized, or reclaimed).
+ */
+export async function claimUpload(
+  client: ServiceClient,
+  projectId: string,
+  sourceId: string,
+): Promise<KnowledgeSource | null> {
+  const { data, error } = await client
+    .from("knowledge_sources")
+    .update({ status: "processing" })
+    .eq("id", sourceId)
+    .eq("project_id", projectId)
+    .eq("status", "uploading")
+    .select(SOURCE_COLUMNS)
+    .maybeSingle();
+  if (error) throw new Error(`Couldn't claim the upload: ${error.code}`);
+  return data ? toKnowledgeSource(data) : null;
+}
+
+/** Puts a claimed source back to `uploading` (after an unexpected error), so finalize can be retried. */
+export async function releaseUpload(
+  client: ServiceClient,
+  source: Pick<KnowledgeSource, "id" | "project_id">,
+): Promise<void> {
+  const { error } = await client
+    .from("knowledge_sources")
+    .update({ status: "uploading" })
+    .eq("id", source.id)
+    .eq("project_id", source.project_id)
+    .eq("status", "processing");
+  if (error) throw new Error(`Couldn't release the upload: ${error.code}`);
+}
+
+/**
+ * A one-time signed upload URL for `storageKey` in the knowledge bucket.
+ * Supabase signs it for this one path; without upsert it can't overwrite an
+ * uploaded object, so it works once. Never a public or download URL.
+ */
+export async function createSignedUpload(
+  client: ServiceClient,
+  storageKey: string,
+): Promise<{ signedUrl: string; token: string; path: string }> {
+  const { data, error } = await client.storage
+    .from(KNOWLEDGE_BUCKET)
+    .createSignedUploadUrl(storageKey);
+  if (error) throw new Error(`Couldn't create the upload URL: ${error.message}`);
+  return { signedUrl: data.signedUrl, token: data.token, path: data.path };
+}
+
+/** The uploaded object is missing (never uploaded, or already deleted). */
+export class MissingUploadError extends Error {
+  constructor() {
+    super("The uploaded file was not found.");
+    this.name = "MissingUploadError";
+  }
+}
+
+/**
+ * The bytes of `storageKey` in the knowledge bucket.
+ * @throws MissingUploadError when Storage answers with a 4xx (no such object); Error otherwise.
+ */
+export async function downloadObject(
+  client: ServiceClient,
+  storageKey: string,
+): Promise<Uint8Array> {
+  const { data, error } = await client.storage.from(KNOWLEDGE_BUCKET).download(storageKey);
+  if (error) {
+    const status = (error as { status?: unknown }).status;
+    if (typeof status === "number" && status >= 400 && status < 500) throw new MissingUploadError();
+    throw new Error(`Couldn't download the upload: ${error.message}`);
+  }
+  return new Uint8Array(await data.arrayBuffer());
 }
 
 /**
