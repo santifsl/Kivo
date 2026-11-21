@@ -3,8 +3,6 @@
   "compilerOptions": {
     "lib": ["ES2022", "DOM"],
     "types": ["node"],
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
     "erasableSyntaxOnly": true
   },
   "include": ["*.ts"]
