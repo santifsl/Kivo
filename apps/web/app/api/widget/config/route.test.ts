@@ -1,9 +1,16 @@
 import { apiErrorSchema, DEFAULT_WIDGET_CONFIG, type WidgetConfig } from "@kivo/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { ProtectResult } from "../../../../lib/arcjet/protect";
 
 // End to end through the real lookup and supabase-js; only the network is mocked.
 // `server-only` throws outside a React Server Components build.
 vi.mock("server-only", () => ({}));
+
+// Arcjet is covered in lib/arcjet/protect.test.ts; here only its result matters.
+const protectConfig = vi.hoisted(() =>
+  vi.fn<(request: Request, input: { publicKey: string }) => Promise<ProtectResult>>(),
+);
+vi.mock("../../../../lib/arcjet/protect", () => ({ protectConfig }));
 
 const { GET, OPTIONS } = await import("./route");
 
@@ -54,6 +61,7 @@ beforeEach(() => {
   vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://project-ref.supabase.co");
   vi.stubEnv(SECRET_ENV, "sb_secret_test_456");
   fetchMock.mockReset();
+  protectConfig.mockReset().mockResolvedValue({ allowed: true });
   vi.stubGlobal("fetch", fetchMock);
   vi.spyOn(console, "error").mockImplementation(() => {});
 });
@@ -105,6 +113,25 @@ describe("GET /api/widget/config", () => {
   ])("%s: 400 invalid_input, no lookup", async (_, query) => {
     await expectError(await get(query), 400, "invalid_input");
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("checks Arcjet with the request and the public key", async () => {
+    dbReturns({ widget_configs: STORED, accounts: { plan: "pro" } });
+    const request = new Request(`https://kivo.test/api/widget/config?key=${KEY}`);
+    await GET(request);
+    expect(protectConfig).toHaveBeenCalledTimes(1);
+    expect(protectConfig).toHaveBeenCalledWith(request, { publicKey: KEY });
+  });
+
+  it("rate limited by Arcjet: 429 rate_limited with the CORS headers, no lookup", async () => {
+    protectConfig.mockResolvedValue({ allowed: false, reason: "rate_limit" });
+    await expectError(await get(`?key=${KEY}`), 429, "rate_limited");
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("invalid key: rejected before Arcjet runs", async () => {
+    await expectError(await get("?key=nope"), 400, "invalid_input");
+    expect(protectConfig).not.toHaveBeenCalled();
   });
 
   it("unknown key: 404 not_found", async () => {
