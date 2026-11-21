@@ -1,10 +1,14 @@
-import type { PostHogConfig } from "posthog-js";
+import type { PostHogConfig, PostHogInterface } from "posthog-js";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const sdk = vi.hoisted(() => ({
   init: vi.fn<(key: string, options: Partial<PostHogConfig>) => void>(),
   set_config: vi.fn(),
   captureException: vi.fn(),
+  get_property: vi.fn(),
+  identify: vi.fn(),
+  reset: vi.fn(),
+  capture: vi.fn(),
 }));
 
 vi.mock("posthog-js", () => ({ default: sdk }));
@@ -112,5 +116,50 @@ describe("browser PostHog runtime", () => {
     fetchConfig.mockRejectedValueOnce(new Error("network unavailable"));
     await expect(getPosthogBrowser()).resolves.toBeUndefined();
     expect(sdk.init).not.toHaveBeenCalled();
+  });
+
+  it("merges the landing identity with the Clerk owner and captures only the project ID", async () => {
+    const { getPosthogBrowser, syncPosthogOwner, captureSnippetCopied } = await import("./browser");
+    await getPosthogBrowser();
+    expect(sdk.identify).not.toHaveBeenCalled();
+
+    await syncPosthogOwner("user_clerk", () => true);
+    expect(sdk.identify).toHaveBeenCalledExactlyOnceWith("user_clerk");
+    expect(sdk.reset).not.toHaveBeenCalled();
+
+    sdk.get_property.mockReturnValue("user_clerk");
+    await captureSnippetCopied("user_clerk", "test-project", () => false);
+    expect(sdk.capture).not.toHaveBeenCalled();
+    await captureSnippetCopied("user_clerk", "test-project", () => true);
+    expect(sdk.identify).toHaveBeenCalledOnce();
+    expect(sdk.capture).toHaveBeenCalledExactlyOnceWith("snippet_copied", {
+      project_id: "test-project",
+    });
+  });
+
+  it("ignores stale auth state and resets a different owner before identifying", async () => {
+    const { syncPosthogOwner } = await import("./browser");
+    sdk.get_property.mockReturnValue("user_previous");
+
+    await syncPosthogOwner("user_stale", () => false);
+    expect(sdk.identify).not.toHaveBeenCalled();
+    expect(sdk.reset).not.toHaveBeenCalled();
+
+    await syncPosthogOwner("user_current", () => true);
+    expect(sdk.reset).toHaveBeenCalledBefore(sdk.identify);
+    expect(sdk.identify).toHaveBeenCalledExactlyOnceWith("user_current");
+  });
+
+  it("resets a persisted owner on Clerk's sign-out destination", async () => {
+    const { getPosthogBrowser } = await import("./browser");
+    location.pathname = "/sign-in";
+    sdk.get_property.mockReturnValue("user_previous");
+    sdk.init.mockImplementation((_key, options) =>
+      options.loaded?.(sdk as unknown as PostHogInterface),
+    );
+
+    await getPosthogBrowser();
+    expect(sdk.reset).toHaveBeenCalledOnce();
+    expect(sdk.identify).not.toHaveBeenCalled();
   });
 });

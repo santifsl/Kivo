@@ -14,5 +14,7 @@ export default async function InstallPage({
   const origin = resolveAppOrigin(process.env.NEXT_PUBLIC_APP_URL, await headers());
   if (!origin) throw new Error("Could not work out the app's URL for the install code.");
 
-  return <InstallView snippet={buildInstallSnippet(origin, project.public_key)} />;
+  return (
+    <InstallView projectId={project.id} snippet={buildInstallSnippet(origin, project.public_key)} />
+  );
 }

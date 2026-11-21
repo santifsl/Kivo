@@ -1,11 +1,26 @@
 import type { PosthogConfigResponse } from "@kivo/shared";
-import type { PostHog } from "posthog-js";
+import type { PostHog, PostHogInterface } from "posthog-js";
+import { normalizePath, SIGN_IN_PATH } from "../auth/routes";
 import { canRecordReplay, isWidgetPath } from "./routes";
 
 let client: PostHog | undefined;
 let initialization: Promise<PostHog | undefined> | undefined;
 let replayPath: string | undefined;
 let replayEnabled = false;
+
+function applyOwner(posthog: PostHogInterface, ownerId: string | null): void {
+  const previous = posthog.get_property("$user_id");
+  if (previous === ownerId) return;
+  if (previous) posthog.reset();
+  if (ownerId) posthog.identify(ownerId);
+}
+
+function resetOnSignIn(posthog: PostHogInterface): void {
+  const path = normalizePath(window.location.pathname);
+  if (path === SIGN_IN_PATH || path.startsWith(`${SIGN_IN_PATH}/`)) {
+    applyOwner(posthog, null);
+  }
+}
 
 async function initialize(): Promise<PostHog | undefined> {
   const response = await fetch("/api/posthog-config", { cache: "no-store" });
@@ -35,6 +50,8 @@ async function initialize(): Promise<PostHog | undefined> {
     defaults: "2026-08-30",
     autocapture: false,
     capture_exceptions: true,
+    // Clerk redirects here on sign-out, including full document navigations.
+    loaded: resetOnSignIn,
     disable_session_recording: !replayEnabled,
     enable_recording_console_log: false,
     session_recording: {
@@ -64,13 +81,39 @@ export function getPosthogBrowser(): Promise<PostHog | undefined> {
 export function updatePosthogReplay(pathname: string): void {
   replayPath = pathname;
   const shouldRecord = canRecordReplay(pathname);
-  if (!client || replayEnabled === shouldRecord) return;
+  if (!client) return;
 
   try {
+    if (window.location.pathname === pathname) resetOnSignIn(client);
+    if (replayEnabled === shouldRecord) return;
     client.set_config({ disable_session_recording: !shouldRecord });
     replayEnabled = shouldRecord;
   } catch {
     // Keep navigation independent of analytics.
+  }
+}
+
+export async function syncPosthogOwner(ownerId: string | null, isCurrent: () => boolean) {
+  try {
+    const posthog = await getPosthogBrowser();
+    if (posthog && isCurrent()) applyOwner(posthog, ownerId);
+  } catch {
+    // Identity tracking is optional.
+  }
+}
+
+export async function captureSnippetCopied(
+  ownerId: string,
+  projectId: string,
+  isCurrent: () => boolean,
+) {
+  try {
+    const posthog = await getPosthogBrowser();
+    if (!posthog || !isCurrent()) return;
+    applyOwner(posthog, ownerId);
+    posthog.capture("snippet_copied", { project_id: projectId });
+  } catch {
+    // The clipboard result is independent of analytics delivery.
   }
 }
 

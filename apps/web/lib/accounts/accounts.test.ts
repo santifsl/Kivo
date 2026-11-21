@@ -4,7 +4,16 @@ import type { ServiceClient } from "../supabase/service";
 
 // `server-only` throws outside a React Server Components build.
 vi.mock("server-only", () => ({}));
-vi.mock("@clerk/nextjs/server", () => ({ auth: async () => ({ userId: null, getToken: async () => null }) }));
+vi.mock("@clerk/nextjs/server", () => ({
+  auth: async () => ({ userId: null, getToken: async () => null }),
+}));
+
+const { after, captureImmediate } = vi.hoisted(() => ({
+  after: vi.fn<(callback: () => Promise<void>) => void>(),
+  captureImmediate: vi.fn(),
+}));
+vi.mock("next/server", () => ({ after }));
+vi.mock("../posthog/server", () => ({ getPosthogServer: () => ({ captureImmediate }) }));
 
 const { ensureAccount } = await import("./ensure-account");
 const { getOwnerPlan } = await import("./get-owner-plan");
@@ -12,12 +21,25 @@ const { createServiceClient } = await import("../supabase/service");
 
 /** A service client whose `from().upsert()` records its calls. */
 function mockServiceClient(error: { message: string } | null = null) {
-  const upsert = vi.fn(async () => ({ data: null, error }));
+  const select = vi
+    .fn<
+      (columns: string) => Promise<{
+        data: { clerk_user_id: string }[] | null;
+        error: { message: string } | null;
+      }>
+    >()
+    .mockResolvedValue({ data: null, error });
+  const upsert = vi.fn(() => ({ select }));
   const from = vi.fn(() => ({ upsert }));
-  return { client: { from } as unknown as ServiceClient, from, upsert };
+  return { client: { from } as unknown as ServiceClient, from, upsert, select };
 }
 
 describe("ensureAccount", () => {
+  beforeEach(() => {
+    after.mockClear();
+    captureImmediate.mockReset();
+  });
+
   it("inserts only clerk_user_id, ignoring duplicates (no plan field)", async () => {
     const { client, from, upsert } = mockServiceClient();
     await ensureAccount("user_123", client);
@@ -44,6 +66,24 @@ describe("ensureAccount", () => {
   it("throws when the insert fails", async () => {
     const { client } = mockServiceClient({ message: "boom" });
     await expect(ensureAccount("user_123", client)).rejects.toThrow("boom");
+    expect(after).not.toHaveBeenCalled();
+  });
+
+  it("schedules signup only for the insert returned by PostgREST", async () => {
+    const { client, select } = mockServiceClient();
+    select
+      .mockResolvedValueOnce({ data: [{ clerk_user_id: "user_123" }], error: null })
+      .mockResolvedValueOnce({ data: [], error: null });
+    await Promise.all([ensureAccount("user_123", client), ensureAccount("user_123", client)]);
+
+    expect(select).toHaveBeenCalledWith("clerk_user_id");
+    expect(after).toHaveBeenCalledOnce();
+    expect(captureImmediate).not.toHaveBeenCalled();
+    await after.mock.calls[0]?.[0]();
+    expect(captureImmediate).toHaveBeenCalledExactlyOnceWith({
+      distinctId: "user_123",
+      event: "signed_up",
+    });
   });
 
   it("refuses an empty user ID without touching the database", async () => {
@@ -82,6 +122,7 @@ describe("ensureAccount on the wire (real supabase-js, mocked fetch)", () => {
     expect(init?.method).toBe("POST");
     expect(url.pathname).toBe("/rest/v1/accounts");
     expect(url.searchParams.get("on_conflict")).toBe("clerk_user_id");
+    expect(url.searchParams.get("select")).toBe("clerk_user_id");
     expect(headers.get("prefer")).toContain("resolution=ignore-duplicates");
     expect(headers.get("prefer")).not.toContain("merge-duplicates");
     expect(body).toEqual({ clerk_user_id: "user_123" });

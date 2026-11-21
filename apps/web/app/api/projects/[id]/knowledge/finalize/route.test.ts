@@ -10,6 +10,11 @@ import { fakePostgrest, type RecordedRequest } from "../../../../../../lib/proje
 
 vi.mock("server-only", () => ({}));
 
+const captureImmediate = vi.hoisted(() => vi.fn());
+vi.mock("../../../../../../lib/posthog/server", () => ({
+  getPosthogServer: () => ({ captureImmediate }),
+}));
+
 let userId: string | null = "user_a";
 vi.mock("@clerk/nextjs/server", () => ({
   auth: async () => ({ userId, getToken: async () => (userId ? `token_${userId}` : null) }),
@@ -61,6 +66,7 @@ const key = () => `${PROJECT}/${SOURCE}.${type}`;
 const DOWNLOAD = /^\/storage\/v1\/object\/knowledge\/(.+)$/;
 
 beforeEach(() => {
+  captureImmediate.mockReset();
   userId = "user_a";
   pending.length = 0;
   vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://project-ref.supabase.co");
@@ -231,12 +237,18 @@ describe("POST /api/projects/:id/knowledge/finalize", () => {
     expect(claim?.headers.get("apikey")).toBe(SECRET);
     expect(downloads).toEqual([key()]);
     expect(embedMock).not.toHaveBeenCalled();
+    expect(captureImmediate).not.toHaveBeenCalled();
 
     await runAfter();
     expect(embedMock).toHaveBeenCalledTimes(1);
     expect(embedMock.mock.calls[0]?.[0].join(" ")).toContain("Refunds are processed");
     expect(pg.to("/rest/v1/knowledge_chunks", "POST")).toHaveLength(1);
     expect(status).toBe("ready");
+    expect(captureImmediate).toHaveBeenCalledExactlyOnceWith({
+      distinctId: "user_a",
+      event: "knowledge_added",
+      properties: { project_id: PROJECT },
+    });
     // The file stays: it is the source.
     expect(bucket.has(key())).toBe(true);
   });
@@ -261,6 +273,7 @@ describe("POST /api/projects/:id/knowledge/finalize", () => {
     expect(downloads).toHaveLength(1);
     await runAfter();
     expect(embedMock).toHaveBeenCalledTimes(1);
+    expect(captureImmediate).toHaveBeenCalledOnce();
 
     // And again, after processing finished.
     const third = await finalize();

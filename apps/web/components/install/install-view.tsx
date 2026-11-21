@@ -8,7 +8,7 @@ export const INSTALL_STEPS: readonly string[] = [
 ];
 
 /** The Install tab: the project's script tag, a copy button and the steps. */
-export function InstallView({ snippet }: { snippet: string }) {
+export function InstallView({ projectId, snippet }: { projectId: string; snippet: string }) {
   return (
     <div className="flex flex-col gap-6">
       <GlassPanel
@@ -20,11 +20,13 @@ export function InstallView({ snippet }: { snippet: string }) {
           <h2 id="install-code-heading" className="text-sm font-medium text-ink">
             Install code
           </h2>
-          <SnippetCopyButton text={snippet} />
+          <SnippetCopyButton projectId={projectId} text={snippet} />
         </div>
         {/* Text, not HTML. Wraps instead of scrolling sideways, so the whole tag is readable at 375 px. */}
         <pre className="p-4 font-mono text-sm leading-relaxed break-all whitespace-pre-wrap text-ink">
-          <code data-testid="install-snippet">{snippet}</code>
+          <code className="ph-no-capture" data-testid="install-snippet">
+            {snippet}
+          </code>
         </pre>
       </GlassPanel>
 

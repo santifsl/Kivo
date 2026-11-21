@@ -1,6 +1,8 @@
 "use client";
 
+import { useClerk } from "@clerk/nextjs";
 import { useEffect, useState } from "react";
+import { captureSnippetCopied } from "../../lib/posthog/browser";
 import { Button } from "../ui/button";
 import { copyText } from "./install-snippet";
 
@@ -13,7 +15,8 @@ const LABELS: Record<CopyStatus, string> = {
 };
 
 /** Copies the exact snippet and says so for 2 seconds (also to screen readers). */
-export function SnippetCopyButton({ text }: { text: string }) {
+export function SnippetCopyButton({ projectId, text }: { projectId: string; text: string }) {
+  const clerk = useClerk();
   const [status, setStatus] = useState<CopyStatus>("idle");
 
   useEffect(() => {
@@ -23,11 +26,15 @@ export function SnippetCopyButton({ text }: { text: string }) {
   }, [status]);
 
   async function copy() {
+    const ownerId = clerk.user?.id;
     const ok = await copyText(
       text,
       typeof navigator === "undefined" ? undefined : navigator.clipboard,
     );
     setStatus(ok ? "copied" : "failed");
+    if (ok && ownerId) {
+      void captureSnippetCopied(ownerId, projectId, () => clerk.user?.id === ownerId);
+    }
   }
 
   return (

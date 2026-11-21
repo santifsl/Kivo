@@ -6,7 +6,10 @@ import { buildInstallSnippet, copyText, resolveAppOrigin } from "./install-snipp
 import { INSTALL_STEPS, InstallView } from "./install-view";
 import { SnippetCopyButton } from "./snippet-copy-button";
 
+vi.mock("@clerk/nextjs", () => ({ useClerk: () => ({ user: { id: "user_a" } }) }));
+
 const KEY = "pk_abcdefgh1234";
+const PROJECT = "6f1c2b9e-1d2a-4c3b-9e8f-0a1b2c3d4e5f";
 const req = (h: Record<string, string>) => new Headers(h);
 
 describe("resolveAppOrigin", () => {
@@ -94,16 +97,17 @@ describe("InstallView", () => {
   const snippet = buildInstallSnippet("https://app.example.com", KEY);
 
   it("gives the copy button the exact snippet", () => {
-    const buttons = elements(InstallView({ snippet })).filter(
+    const buttons = elements(InstallView({ projectId: PROJECT, snippet })).filter(
       (el) => el.type === SnippetCopyButton,
     );
     expect(buttons).toHaveLength(1);
-    expect(buttons[0]?.props).toEqual({ text: snippet });
+    expect(buttons[0]?.props).toEqual({ projectId: PROJECT, text: snippet });
   });
 
   it("shows the snippet as text, not HTML, and the steps", () => {
-    const html = renderToStaticMarkup(<InstallView snippet={snippet} />);
+    const html = renderToStaticMarkup(<InstallView projectId={PROJECT} snippet={snippet} />);
     expect(html).not.toContain("<script");
+    expect(html).toContain('class="ph-no-capture" data-testid="install-snippet"');
     expect(html).toContain(
       "&lt;script src=&quot;https://app.example.com/widget.js&quot; data-key=&quot;pk_abcdefgh1234&quot; async&gt;&lt;/script&gt;",
     );

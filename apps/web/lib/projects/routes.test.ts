@@ -1,4 +1,5 @@
 import { apiErrorSchema, publicKeySchema, type Project } from "@kivo/shared";
+import type * as NextServer from "next/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fakePostgrest, pgError } from "./fake-postgrest";
 
@@ -8,6 +9,16 @@ import { fakePostgrest, pgError } from "./fake-postgrest";
 // that owner reads go out with the caller's token and no owner filter.
 
 vi.mock("server-only", () => ({}));
+
+const { after, captureImmediate } = vi.hoisted(() => ({
+  after: vi.fn<(callback: () => Promise<void>) => void>(),
+  captureImmediate: vi.fn(),
+}));
+vi.mock("next/server", async (importOriginal) => ({
+  ...(await importOriginal<typeof NextServer>()),
+  after,
+}));
+vi.mock("../posthog/server", () => ({ getPosthogServer: () => ({ captureImmediate }) }));
 
 let userId: string | null = "user_a";
 vi.mock("@clerk/nextjs/server", () => ({
@@ -39,6 +50,8 @@ function project(id: string, name: string, key = "pk_test_abcdefgh"): Project {
 let pg: ReturnType<typeof fakePostgrest>;
 
 beforeEach(() => {
+  after.mockClear();
+  captureImmediate.mockReset();
   userId = "user_a";
   vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://project-ref.supabase.co");
   vi.stubEnv("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", PUBLISHABLE);
@@ -201,6 +214,15 @@ describe("POST /api/projects", () => {
     expect(upsert?.headers.get("apikey")).toBe(SECRET);
     expectOwnerClient("/rest/v1/accounts", "user_a", "GET");
     expect(pg.to("/rest/v1/accounts", "GET")[0]?.params.has("clerk_user_id")).toBe(false);
+    expect(after).toHaveBeenCalledOnce();
+    expect(captureImmediate).not.toHaveBeenCalled();
+    captureImmediate.mockRejectedValueOnce(new Error("PostHog unavailable"));
+    await expect(after.mock.calls[0]?.[0]()).resolves.toBeUndefined();
+    expect(captureImmediate).toHaveBeenCalledExactlyOnceWith({
+      distinctId: "user_a",
+      event: "project_created",
+      properties: { project_id: ID },
+    });
   });
 
   it("Pro passes the Pro limit", async () => {
@@ -222,6 +244,7 @@ describe("POST /api/projects", () => {
 
     expect((await post({ name: "First" })).status).toBe(201);
     await expectError(await post({ name: "Second" }), 403, "plan_limit");
+    expect(after).toHaveBeenCalledOnce();
   });
 
   it("key collision: retries once with a new key", async () => {
