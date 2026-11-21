@@ -279,6 +279,28 @@ describe("POST /api/widget/chat — errors", () => {
     expect(protectChat).not.toHaveBeenCalled();
   });
 
+  it("stops reading a streamed body as soon as it passes 16 KiB", async () => {
+    const cancel = vi.fn();
+    let chunks = 0;
+    const body = new ReadableStream<Uint8Array>(
+      {
+        pull(controller) {
+          if (chunks++ < 2) controller.enqueue(new Uint8Array(10 * 1024));
+          else controller.close();
+        },
+        cancel,
+      },
+      { highWaterMark: 0 },
+    );
+    const init = { body, duplex: "half" } as const;
+
+    await expectError(await post(VALID, init), 400, "invalid_input");
+    expect(chunks).toBe(2);
+    expect(cancel).toHaveBeenCalledOnce();
+    expect(protectChat).not.toHaveBeenCalled();
+    expectNothingCountedOrSent();
+  });
+
   it("rate limited by Arcjet: 429 rate_limited, nothing counted or sent", async () => {
     protectChat.mockResolvedValue({ allowed: false, reason: "rate_limit" });
     await expectError(await post(VALID), 429, "rate_limited");

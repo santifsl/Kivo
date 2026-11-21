@@ -104,13 +104,28 @@ export function OPTIONS(): Response {
 /** The parsed JSON body, or undefined if it's too big or not JSON. */
 async function readJson(request: Request): Promise<unknown> {
   const declared = Number(request.headers.get("content-length"));
-  if (declared > MAX_CHAT_BODY_BYTES) return undefined;
+  if (declared > MAX_CHAT_BODY_BYTES || !request.body) return undefined;
+
+  const reader = request.body.getReader();
+  const decoder = new TextDecoder();
+  let bytes = 0;
+  let text = "";
   try {
-    const text = await request.text();
-    if (new TextEncoder().encode(text).length > MAX_CHAT_BODY_BYTES) return undefined;
-    return JSON.parse(text) as unknown;
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      bytes += value.byteLength;
+      if (bytes > MAX_CHAT_BODY_BYTES) {
+        void reader.cancel().catch(() => {});
+        return undefined;
+      }
+      text += decoder.decode(value, { stream: true });
+    }
+    return JSON.parse(text + decoder.decode()) as unknown;
   } catch {
     return undefined;
+  } finally {
+    reader.releaseLock();
   }
 }
 
