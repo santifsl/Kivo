@@ -1,7 +1,3 @@
-// The project page's tabs, in order. Later phases add Conversations and
-// Customize by adding an entry here and its page under
-// app/dashboard/projects/[id]/<segment>/.
-
 export type ProjectTab = {
   label: string;
   /** The route segment under /dashboard/projects/[id]. */
@@ -11,7 +7,9 @@ export type ProjectTab = {
 const KNOWLEDGE_TAB: ProjectTab = { label: "Knowledge", segment: "knowledge" };
 const INSTALL_TAB: ProjectTab = { label: "Install", segment: "install" };
 
-export const PROJECT_TABS: readonly ProjectTab[] = [KNOWLEDGE_TAB, INSTALL_TAB];
+export const CONVERSATIONS_TAB: ProjectTab = { label: "Conversations", segment: "conversations" };
+
+export const PROJECT_TABS: readonly ProjectTab[] = [KNOWLEDGE_TAB, CONVERSATIONS_TAB, INSTALL_TAB];
 
 /** Where /dashboard/projects/[id] redirects. Install for now (P3K-T07). */
 export const DEFAULT_PROJECT_TAB: ProjectTab = INSTALL_TAB;
