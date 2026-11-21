@@ -148,7 +148,18 @@ async function copySnippet(page: Page): Promise<string> {
 }
 
 async function sendVisitorChat(page: Page, demoOrigin: string): Promise<ChatResponse> {
-  await page.goto(demoOrigin);
+  const widgetScript = `${origin}/widget.js`;
+  // Establish preview access before the protected script is requested cross-site.
+  assert.equal(
+    (await page.goto(widgetScript))?.status(),
+    200,
+    "Expected the preview widget script.",
+  );
+  const [loader] = await Promise.all([
+    page.waitForResponse((item) => item.url() === widgetScript),
+    page.goto(demoOrigin),
+  ]);
+  assert.equal(loader.status(), 200, "The external page could not load the preview widget script.");
   await page.locator("chat-widget-host button").click();
   const widget = page.frameLocator("chat-widget-host iframe");
   await widget.getByRole("textbox", { name: "Message" }).fill(QUESTION);
