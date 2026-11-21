@@ -258,8 +258,9 @@ describe("projects API client", () => {
 describe("project tabs", () => {
   const id = project().id;
 
-  it("Install is the only tab for now", () => {
-    expect(PROJECT_TABS.map((t) => t.segment)).toEqual(["install"]);
+  it("Knowledge then Install, with Install still the default", () => {
+    expect(PROJECT_TABS.map((t) => t.segment)).toEqual(["knowledge", "install"]);
+    expect(DEFAULT_PROJECT_TAB.segment).toBe("install");
   });
 
   it.each([
