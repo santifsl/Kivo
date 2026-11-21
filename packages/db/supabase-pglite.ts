@@ -16,16 +16,22 @@
 //   await s.as("authenticated", "user_a", (tx) => tx.query("select * from public.projects"));
 //   await s.close();
 
-import { createHash } from "node:crypto";
-import { readdir, readFile, rename, writeFile } from "node:fs/promises";
+import { createHash, randomUUID } from "node:crypto";
+import { mkdir, readdir, readFile, rename, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
-import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { PGlite, type Transaction } from "@electric-sql/pglite";
 import { vector } from "@electric-sql/pglite-pgvector";
 
 export const MIGRATIONS_DIR = fileURLToPath(new URL("../../supabase/migrations/", import.meta.url));
+
+/**
+ * The migrated-database cache: inside this package's node_modules (gitignored,
+ * owned by whoever checked out the repo), not a shared temp dir another user
+ * could plant files or symlinks in.
+ */
+const CACHE_DIR = fileURLToPath(new URL("./node_modules/.cache/kivo-pglite/", import.meta.url));
 
 /** The roles a Supabase request runs as. */
 export type SupabaseRole = "anon" | "authenticated" | "service_role";
@@ -171,7 +177,7 @@ export interface SupabasePglite {
 
 /**
  * Every migration in `dir`, applied one fresh session at a time. That costs
- * ~2 s per migration, so the result is cached in the OS temp dir, keyed by a
+ * ~2 s per migration, so the result is cached in a private temp dir, keyed by a
  * hash of the bootstrap, each migration's name and SQL, and the installed
  * pglite packages (their resolved paths carry the versions): any change
  * rebuilds it, and the test files of one run share it.
@@ -185,7 +191,7 @@ async function migratedDump(dir: string): Promise<PgliteDump> {
     .update(require.resolve("@electric-sql/pglite-pgvector"))
     .update(SUPABASE_BOOTSTRAP);
   files.forEach((f, i) => hash.update(`\0${f}\0${sources[i]}`));
-  const cacheFile = join(tmpdir(), `kivo-pglite-${hash.digest("hex").slice(0, 32)}.tar`);
+  const cacheFile = join(CACHE_DIR, `${hash.digest("hex").slice(0, 32)}.tar`);
 
   try {
     return new Blob([await readFile(cacheFile)]);
@@ -197,9 +203,12 @@ async function migratedDump(dir: string): Promise<PgliteDump> {
   for (const [i, file] of files.entries()) {
     dump = await applyMigration(dump, file, sources[i] ?? "");
   }
-  // Write then rename, so a concurrent reader never sees half a file.
-  const partial = `${cacheFile}.${process.pid}.partial`;
-  await writeFile(partial, Buffer.from(await dump.arrayBuffer()));
+  // A new file ("wx": fails if anything, a symlink included, is already at
+  // that path), then renamed into place, so a concurrent reader never sees
+  // half a file.
+  await mkdir(CACHE_DIR, { recursive: true });
+  const partial = `${cacheFile}.${randomUUID()}.partial`;
+  await writeFile(partial, Buffer.from(await dump.arrayBuffer()), { flag: "wx" });
   await rename(partial, cacheFile);
   return dump;
 }
