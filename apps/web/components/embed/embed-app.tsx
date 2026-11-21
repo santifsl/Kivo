@@ -2,15 +2,15 @@
 
 import type { WidgetConfig, WidgetConfigResponse } from "@kivo/shared";
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
-import { chatReducer, INITIAL_CHAT_STATE, SEND_ERROR } from "@/lib/embed/chat-state";
+import { sendChatMessage } from "../../lib/embed/chat-api";
+import { chatReducer, INITIAL_CHAT_STATE } from "../../lib/embed/chat-state";
 import {
   createPanelMessenger,
   type OutgoingMessage,
   type PanelMessenger,
-} from "@/lib/embed/messenger";
-import { sendChatMessage } from "@/lib/embed/mock-reply";
-import { randomId } from "@/lib/embed/random-id";
-import { getVisitorId } from "@/lib/embed/visitor-id";
+} from "../../lib/embed/messenger";
+import { randomId } from "../../lib/embed/random-id";
+import { getVisitorId } from "../../lib/embed/visitor-id";
 import { FALLBACK_HEADER, PanelView } from "./panel-view";
 
 export type EmbedAppProps = {
@@ -101,25 +101,25 @@ export function EmbedApp({ publicKey, hostOrigin }: EmbedAppProps) {
     if (!text || !publicKey || chat.status === "typing") return;
     setDraft("");
     dispatch({ type: "send", id: randomId(), text });
-    try {
-      const res = await sendChatMessage({
-        key: publicKey,
-        visitorId: getVisitorId(),
-        message: text,
-        ...(chat.conversationId ? { conversationId: chat.conversationId } : {}),
-      });
-      dispatch({
-        type: "reply",
-        id: randomId(),
-        text: res.reply,
-        conversationId: res.conversationId,
-      });
-      if (!visibleRef.current) {
-        unreadRef.current += 1;
-        post({ type: "unread", count: unreadRef.current });
-      }
-    } catch {
-      dispatch({ type: "fail", error: SEND_ERROR });
+    const result = await sendChatMessage({
+      key: publicKey,
+      visitorId: getVisitorId(),
+      message: text,
+      ...(chat.conversationId ? { conversationId: chat.conversationId } : {}),
+    });
+    if (!result.ok) {
+      dispatch({ type: "fail", error: result.error });
+      return;
+    }
+    dispatch({
+      type: "reply",
+      id: randomId(),
+      text: result.data.reply,
+      conversationId: result.data.conversationId,
+    });
+    if (!visibleRef.current) {
+      unreadRef.current += 1;
+      post({ type: "unread", count: unreadRef.current });
     }
   };
 

@@ -23,8 +23,6 @@ export const INITIAL_CHAT_STATE: ChatState = {
   error: null,
 };
 
-export const SEND_ERROR = "Sorry, something went wrong. Please try again.";
-
 export function chatReducer(state: ChatState, action: ChatAction): ChatState {
   switch (action.type) {
     case "send":

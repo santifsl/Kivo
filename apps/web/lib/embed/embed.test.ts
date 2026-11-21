@@ -1,14 +1,12 @@
 import { VISITOR_ID_MAX_LENGTH } from "@kivo/shared";
 import { LOADER_MESSAGE_SOURCE, PANEL_MESSAGE_SOURCE } from "@kivo/shared/embed";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { chatReducer, INITIAL_CHAT_STATE } from "./chat-state";
 import { createPanelMessenger } from "./messenger";
-import { MOCK_REPLY, MOCK_REPLY_DELAY_MS, sendChatMessage } from "./mock-reply";
 import { parseHostOrigin } from "./origin";
 import { getVisitorId, resetVisitorIdMemory, VISITOR_ID_STORAGE_KEY } from "./visitor-id";
 
 const HOST = "https://host.example";
-const KEY = "pk_abc123XYZ_789";
 
 describe("parseHostOrigin", () => {
   it.each([HOST, "http://localhost:8080"])("accepts %s", (o) => {
@@ -30,48 +28,7 @@ describe("parseHostOrigin", () => {
   });
 });
 
-describe("chat flow: send → typing → mock reply", () => {
-  beforeEach(() => vi.useFakeTimers());
-  afterEach(() => vi.useRealTimers());
-
-  it("shows typing after send, then the mock reply after the delay", async () => {
-    let state = chatReducer(INITIAL_CHAT_STATE, { type: "send", id: "v1", text: "Hi" });
-    expect(state.status).toBe("typing");
-    expect(state.messages).toEqual([{ id: "v1", role: "visitor", text: "Hi" }]);
-
-    let settled = false;
-    const pending = sendChatMessage({ key: KEY, visitorId: "v", message: "Hi" }).then((r) => {
-      settled = true;
-      return r;
-    });
-    await vi.advanceTimersByTimeAsync(MOCK_REPLY_DELAY_MS - 1);
-    expect(settled).toBe(false);
-    await vi.advanceTimersByTimeAsync(1);
-    const res = await pending;
-    expect(res.reply).toBe(MOCK_REPLY);
-
-    state = chatReducer(state, {
-      type: "reply",
-      id: "b1",
-      text: res.reply,
-      conversationId: res.conversationId,
-    });
-    expect(state.status).toBe("idle");
-    expect(state.conversationId).toBe(res.conversationId);
-    expect(state.messages.at(-1)).toEqual({ id: "b1", role: "bot", text: MOCK_REPLY });
-  });
-
-  it("keeps the conversation id it was given", async () => {
-    const pending = sendChatMessage({
-      key: KEY,
-      visitorId: "v",
-      message: "Hi",
-      conversationId: "c-1",
-    });
-    await vi.advanceTimersByTimeAsync(MOCK_REPLY_DELAY_MS);
-    expect((await pending).conversationId).toBe("c-1");
-  });
-
+describe("chatReducer", () => {
   it("fail stops typing and keeps the messages", () => {
     const sent = chatReducer(INITIAL_CHAT_STATE, { type: "send", id: "v1", text: "Hi" });
     const failed = chatReducer(sent, { type: "fail", error: "nope" });
