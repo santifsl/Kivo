@@ -16,6 +16,11 @@ import {
   saveChatTurn,
 } from "../../../../lib/chat/store";
 import { embed } from "../../../../lib/openai/embed";
+import {
+  trackBlockedMessage,
+  trackChatGeneration,
+  trackFirstChat,
+} from "../../../../lib/posthog/chat-events";
 import { createServiceClient } from "../../../../lib/supabase/service";
 import { widgetErrorResponse } from "../../../../lib/widget-config/http";
 
@@ -38,6 +43,7 @@ export async function POST(request: Request): Promise<Response> {
   // 2. Arcjet: rate limit + prompt injection. Blocked → never counted, never sent to OpenAI.
   const protection = await protectChat(request, { publicKey: key, message });
   if (!protection.allowed) {
+    trackBlockedMessage(protection.reason);
     return protection.reason === "injection"
       ? widgetErrorResponse("message_blocked", "This message can't be answered.")
       : widgetErrorResponse("rate_limited", "Too many messages. Please wait a minute.");
@@ -74,19 +80,22 @@ export async function POST(request: Request): Promise<Response> {
 
     // 6–7. Answer: no passages → the fixed reply with no chat call.
     step = "answer";
-    const reply =
-      passages.length === 0 ? I_DONT_KNOW_REPLY : await generateAnswer(message, passages);
+    const answer = passages.length > 0 ? await generateAnswer(message, passages) : undefined;
+    const reply = answer?.reply ?? I_DONT_KNOW_REPLY;
 
     // 8. Save and reply as plain text in JSON.
     step = "save";
-    const savedId = await saveChatTurn(db, {
+    const saved = await saveChatTurn(db, {
       projectId: project.id,
       conversationId,
       visitorId,
       message,
       reply,
     });
-    const response: ChatResponse = { conversationId: savedId, reply };
+    if (saved.firstChatAt) trackFirstChat(project.ownerId, project.id, saved.firstChatAt);
+    if (answer)
+      trackChatGeneration(project.ownerId, project.id, saved.conversationId, answer.generation);
+    const response: ChatResponse = { conversationId: saved.conversationId, reply };
     return Response.json(response, { headers: CHAT_HEADERS });
   } catch (err) {
     if (err instanceof ConversationGoneError) {

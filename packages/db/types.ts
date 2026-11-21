@@ -323,6 +323,19 @@ export type Database = {
         }
         Returns: string
       }
+      save_chat_turn_with_first_chat: {
+        Args: {
+          p_bot_reply: string
+          p_conversation_id: string
+          p_project_id: string
+          p_visitor_id: string
+          p_visitor_message: string
+        }
+        Returns: {
+          conversation_id: string
+          first_chat_at: string
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never

@@ -24,10 +24,16 @@ export class ChatModelError extends Error {
   }
 }
 
+export interface ChatGeneration {
+  model: string;
+  latencySeconds: number;
+  serviceTier: string | null | undefined;
+  usage?: { input: number; cachedInput: number; output: number };
+}
+
 /**
- * Asks `CHAT_MODEL` to answer `question` from `passages` only. Returns plain
- * text. Never called with no passages: the route sends `I_DONT_KNOW_REPLY`
- * itself then.
+ * Asks `CHAT_MODEL` to answer `question` from `passages` only. Returns the plain
+ * text reply and generation metadata. The route handles the no-passages case.
  *
  * @throws ChatModelError if the response has no text.
  * @throws OpenAI.APIError (from `openai`) when the request fails.
@@ -35,9 +41,11 @@ export class ChatModelError extends Error {
 export async function generateAnswer(
   question: string,
   passages: readonly string[],
-): Promise<string> {
+): Promise<{ reply: string; generation: ChatGeneration }> {
   const { instructions, input } = buildChatPrompt(question, passages);
-  const response = await createOpenAIClient().responses.create({
+  const client = createOpenAIClient();
+  const started = performance.now();
+  const response = await client.responses.create({
     model: CHAT_MODEL,
     instructions,
     input,
@@ -49,6 +57,7 @@ export async function generateAnswer(
     store: false,
   });
 
+  const latencySeconds = (performance.now() - started) / 1_000;
   const text = response.output_text.trim();
   if (text === "") {
     throw new ChatModelError(
@@ -56,5 +65,20 @@ export async function generateAnswer(
     );
   }
   // The model was told to reply with exactly this; tidy minor variations (quotes, trailing space).
-  return text.includes(I_DONT_KNOW_REPLY) ? I_DONT_KNOW_REPLY : text;
+  const { usage } = response;
+  return {
+    reply: text.includes(I_DONT_KNOW_REPLY) ? I_DONT_KNOW_REPLY : text,
+    generation: {
+      model: response.model || CHAT_MODEL,
+      latencySeconds,
+      serviceTier: response.service_tier,
+      ...(usage && {
+        usage: {
+          input: usage.input_tokens,
+          cachedInput: usage.input_tokens_details.cached_tokens,
+          output: usage.output_tokens,
+        },
+      }),
+    },
+  };
 }

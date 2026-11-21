@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } fr
 import type { ProtectResult } from "../../../../lib/arcjet/protect";
 
 // End to end through the real route, lib/chat and supabase-js. Mocked: Arcjet
-// (its result only), OpenAI (at the client factory) and PostgREST (at fetch).
+// (its result only), OpenAI and PostHog (at their clients), and PostgREST (at fetch).
 vi.mock("server-only", () => ({}));
 
 const protectChat = vi.hoisted(() =>
@@ -19,6 +19,15 @@ const openai = vi.hoisted(() => ({
 }));
 vi.mock("../../../../lib/openai/client", () => ({ createOpenAIClient: () => openai }));
 
+const { after, captureImmediate, captureAiImmediate, getPosthogServer } = vi.hoisted(() => ({
+  after: vi.fn<(callback: () => Promise<void>) => void>(),
+  captureImmediate: vi.fn(),
+  captureAiImmediate: vi.fn(),
+  getPosthogServer: vi.fn(),
+}));
+vi.mock("next/server", () => ({ after }));
+vi.mock("../../../../lib/posthog/server", () => ({ getPosthogServer }));
+
 const { POST, OPTIONS } = await import("./route");
 const { I_DONT_KNOW_REPLY } = await import("../../../../lib/chat/prompt");
 const { CHAT_MODEL } = await import("../../../../lib/chat/answer");
@@ -28,19 +37,22 @@ const SECRET_ENV = ["SUPABASE", "SECRET", "KEY"].join("_");
 
 const KEY = "pk_test_abcdefgh";
 const PROJECT_ID = "11111111-1111-4111-8111-111111111111";
+const OWNER_ID = "user_owner";
 const CONVERSATION_ID = "22222222-2222-4222-8222-222222222222";
 const NEW_CONVERSATION_ID = "33333333-3333-4333-8333-333333333333";
+const FIRST_CHAT_AT = "2026-11-21T23:59:59.123+00:00";
 const MESSAGE = "How long does shipping take to Canada?";
 const VECTOR = Array.from({ length: 1536 }, (_, i) => i / 1536);
 const PASSAGES = ["Shipping to Canada takes 5–7 business days.", "Returns are free for 30 days."];
 
 /** What PostgREST answers, per table or function. Tests override pieces. */
 interface Db {
-  project: { id: string; accounts: { plan: string } | null } | null;
+  project: { id: string; owner_id: string; accounts: { plan: string } | null } | null;
   conversation: boolean;
   consume: boolean;
   chunks: string[];
   save: Response | null;
+  firstChatAt: string | null;
 }
 
 let db: Db;
@@ -64,8 +76,16 @@ function postgrest(url: string, init?: RequestInit): Response {
       return Response.json(
         db.chunks.map((content, i) => ({ id: `c${i}`, source_id: "s", content, similarity: 0.9 })),
       );
+    case "rpc/save_chat_turn_with_first_chat":
+      return (
+        db.save ??
+        Response.json({
+          conversation_id: NEW_CONVERSATION_ID,
+          first_chat_at: db.firstChatAt,
+        })
+      );
     case "rpc/save_chat_turn":
-      return db.save ?? Response.json(NEW_CONVERSATION_ID);
+      return Response.json(NEW_CONVERSATION_ID);
     default:
       throw new Error(`Unexpected PostgREST call: ${path}`);
   }
@@ -105,8 +125,15 @@ async function expectError(res: Response, status: number, code: string) {
 function modelAnswers(text: string) {
   openai.responses.create.mockResolvedValue({
     output_text: text,
+    model: CHAT_MODEL,
+    service_tier: "default",
     status: "completed",
     incomplete_details: null,
+    usage: {
+      input_tokens: 1_000,
+      input_tokens_details: { cached_tokens: 400 },
+      output_tokens: 200,
+    },
   });
 }
 
@@ -121,14 +148,19 @@ function logged(): string {
 }
 
 beforeEach(() => {
+  after.mockReset();
+  captureImmediate.mockReset();
+  captureAiImmediate.mockReset();
+  getPosthogServer.mockReset().mockReturnValue({ captureImmediate, captureAiImmediate });
   vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://project-ref.supabase.co");
   vi.stubEnv(SECRET_ENV, "sb_secret_test_456");
   db = {
-    project: { id: PROJECT_ID, accounts: { plan: "free" } },
+    project: { id: PROJECT_ID, owner_id: OWNER_ID, accounts: { plan: "free" } },
     conversation: true,
     consume: true,
     chunks: PASSAGES,
     save: null,
+    firstChatAt: null,
   };
   calls = [];
   fetchMock.mockReset().mockImplementation(async (input, init) => postgrest(String(input), init));
@@ -143,6 +175,10 @@ beforeEach(() => {
   warnLog = vi.spyOn(console, "warn").mockImplementation(() => {});
 });
 
+async function runAfter() {
+  await Promise.all(after.mock.calls.map(([callback]) => callback()));
+}
+
 afterEach(() => {
   expect(logged()).not.toContain(MESSAGE);
   vi.unstubAllEnvs();
@@ -152,6 +188,7 @@ afterEach(() => {
 
 describe("POST /api/widget/chat — success", () => {
   it("answers from the passages, saves the turn, returns { conversationId, reply }", async () => {
+    db.firstChatAt = FIRST_CHAT_AT;
     const res = await post(VALID);
 
     expect(res.status).toBe(200);
@@ -192,12 +229,39 @@ describe("POST /api/widget/chat — success", () => {
     expect((params as { input: string }).input).toContain(PASSAGES[0]);
     expect((params as { input: string }).input).toContain(MESSAGE);
     // A new conversation: null id.
-    expect(rpcCalls("save_chat_turn")[0]?.body).toEqual({
+    expect(rpcCalls("save_chat_turn_with_first_chat")[0]?.body).toEqual({
       p_project_id: PROJECT_ID,
       p_conversation_id: null,
       p_visitor_id: "v_123",
       p_visitor_message: MESSAGE,
       p_bot_reply: "Shipping to Canada takes 5–7 business days.",
+    });
+    expect(captureAiImmediate).not.toHaveBeenCalled();
+    await runAfter();
+    expect(captureImmediate).toHaveBeenCalledExactlyOnceWith({
+      distinctId: OWNER_ID,
+      event: "first_chat",
+      uuid: PROJECT_ID,
+      timestamp: new Date(FIRST_CHAT_AT),
+      properties: { project_id: PROJECT_ID },
+    });
+    expect(captureAiImmediate).toHaveBeenCalledExactlyOnceWith({
+      distinctId: OWNER_ID,
+      event: "$ai_generation",
+      properties: {
+        project_id: PROJECT_ID,
+        $ai_trace_id: expect.stringMatching(/^[a-f0-9-]{36}$/),
+        $ai_session_id: NEW_CONVERSATION_ID,
+        $ai_model: CHAT_MODEL,
+        $ai_provider: "openai",
+        $ai_latency: expect.any(Number),
+        $ai_input_tokens: 1000,
+        $ai_cache_read_input_tokens: 400,
+        $ai_output_tokens: 200,
+        $ai_input_cost_usd: expect.closeTo(0.000064, 9),
+        $ai_output_cost_usd: expect.closeTo(0.0001, 9),
+        $ai_total_cost_usd: expect.closeTo(0.000164, 9),
+      },
     });
   });
 
@@ -205,13 +269,15 @@ describe("POST /api/widget/chat — success", () => {
     const res = await post({ ...VALID, conversationId: CONVERSATION_ID });
     expect(res.status).toBe(200);
     expect(calls.find((c) => c.path === "conversations")).toBeDefined();
-    expect(rpcCalls("save_chat_turn")[0]?.body).toMatchObject({
+    expect(rpcCalls("save_chat_turn_with_first_chat")[0]?.body).toMatchObject({
       p_conversation_id: CONVERSATION_ID,
     });
+    await runAfter();
+    expect(captureImmediate).not.toHaveBeenCalled();
   });
 
   it("Pro: counts against the Pro limit", async () => {
-    db.project = { id: PROJECT_ID, accounts: { plan: "pro" } };
+    db.project = { id: PROJECT_ID, owner_id: OWNER_ID, accounts: { plan: "pro" } };
     await post(VALID);
     expect(rpcCalls("consume_message")[0]?.body).toMatchObject({
       p_limit: PLAN_LIMITS.pro.messagesPerMonth,
@@ -219,7 +285,7 @@ describe("POST /api/widget/chat — success", () => {
   });
 
   it("unknown plan: treated as Free", async () => {
-    db.project = { id: PROJECT_ID, accounts: { plan: "enterprise" } };
+    db.project = { id: PROJECT_ID, owner_id: OWNER_ID, accounts: { plan: "enterprise" } };
     await post(VALID);
     expect(rpcCalls("consume_message")[0]?.body).toMatchObject({
       p_limit: PLAN_LIMITS.free.messagesPerMonth,
@@ -228,14 +294,18 @@ describe("POST /api/widget/chat — success", () => {
 
   it('no chunks: the fixed "I don\'t know" reply with no chat-model call, still saved', async () => {
     db.chunks = [];
+    db.firstChatAt = FIRST_CHAT_AT;
     const res = await post(VALID);
     expect(res.status).toBe(200);
     expect(((await res.json()) as ChatResponse).reply).toBe(I_DONT_KNOW_REPLY);
     expect(openai.embeddings.create).toHaveBeenCalledTimes(1);
     expect(openai.responses.create).not.toHaveBeenCalled();
-    expect(rpcCalls("save_chat_turn")[0]?.body).toMatchObject({
+    expect(rpcCalls("save_chat_turn_with_first_chat")[0]?.body).toMatchObject({
       p_bot_reply: I_DONT_KNOW_REPLY,
     });
+    await runAfter();
+    expect(captureAiImmediate).not.toHaveBeenCalled();
+    expect(captureImmediate).toHaveBeenCalledOnce();
   });
 
   it("the model's \"I don't know\" is normalized to the fixed text", async () => {
@@ -249,6 +319,45 @@ describe("POST /api/widget/chat — success", () => {
     const res = await post(VALID);
     expect(((await res.json()) as ChatResponse).reply).toBe("Use <b>5–7</b> days & ask us.");
   });
+
+  it("returns the saved reply even when telemetry is rejected", async () => {
+    captureAiImmediate.mockRejectedValueOnce(new Error("PostHog unavailable"));
+    const res = await post(VALID);
+
+    expect(res.status).toBe(200);
+    await expect(runAfter()).resolves.toBeUndefined();
+    expect(captureAiImmediate).toHaveBeenCalledOnce();
+    expect((await res.json()).conversationId).toBe(NEW_CONVERSATION_ID);
+  });
+
+  it("keeps the real generation metadata without estimating missing token usage", async () => {
+    openai.responses.create.mockResolvedValueOnce({ output_text: "Hello.", model: CHAT_MODEL });
+    expect((await post(VALID)).status).toBe(200);
+
+    await runAfter();
+    expect(captureAiImmediate.mock.calls[0]?.[0].properties).toMatchObject({
+      $ai_model: CHAT_MODEL,
+      $ai_latency: expect.any(Number),
+    });
+    expect(captureAiImmediate.mock.calls[0]?.[0].properties).not.toHaveProperty("$ai_input_tokens");
+    expect(captureAiImmediate.mock.calls[0]?.[0].properties).not.toHaveProperty(
+      "$ai_total_cost_usd",
+    );
+  });
+
+  it("falls back only when PostgREST reports the new RPC missing and omits first_chat", async () => {
+    db.save = Response.json({ code: "PGRST202", message: "Missing RPC" }, { status: 404 });
+
+    const res = await post(VALID);
+    expect(res.status).toBe(200);
+    expect(rpcCalls("save_chat_turn_with_first_chat")[0]?.body).toEqual(
+      rpcCalls("save_chat_turn")[0]?.body,
+    );
+    expect(rpcCalls("save_chat_turn")).toHaveLength(1);
+    await runAfter();
+    expect(captureImmediate).not.toHaveBeenCalled();
+    expect(captureAiImmediate).toHaveBeenCalledOnce();
+  });
 });
 
 describe("POST /api/widget/chat — errors", () => {
@@ -257,6 +366,7 @@ describe("POST /api/widget/chat — errors", () => {
     expect(openai.embeddings.create).not.toHaveBeenCalled();
     expect(openai.responses.create).not.toHaveBeenCalled();
     expect(rpcCalls("save_chat_turn")).toEqual([]);
+    expect(rpcCalls("save_chat_turn_with_first_chat")).toEqual([]);
   }
 
   it.each([
@@ -306,6 +416,11 @@ describe("POST /api/widget/chat — errors", () => {
     await expectError(await post(VALID), 429, "rate_limited");
     expect(fetchMock).not.toHaveBeenCalled();
     expectNothingCountedOrSent();
+    await runAfter();
+    expect(captureImmediate).toHaveBeenCalledExactlyOnceWith({
+      event: "message_blocked",
+      properties: { reason: "rate_limit" },
+    });
   });
 
   it("prompt injection: 400 message_blocked, nothing counted or sent", async () => {
@@ -313,6 +428,11 @@ describe("POST /api/widget/chat — errors", () => {
     await expectError(await post(VALID), 400, "message_blocked");
     expect(fetchMock).not.toHaveBeenCalled();
     expectNothingCountedOrSent();
+    await runAfter();
+    expect(captureImmediate).toHaveBeenCalledExactlyOnceWith({
+      event: "message_blocked",
+      properties: { reason: "injection" },
+    });
   });
 
   it("unknown key: 404 not_found, nothing counted", async () => {
@@ -324,6 +444,7 @@ describe("POST /api/widget/chat — errors", () => {
   it("a conversation of another project: 404 not_found, nothing counted", async () => {
     db.conversation = false;
     await expectError(await post({ ...VALID, conversationId: CONVERSATION_ID }), 404, "not_found");
+    expect(after).not.toHaveBeenCalled();
     expectNothingCountedOrSent();
   });
 
@@ -389,6 +510,8 @@ describe("POST /api/widget/chat — errors", () => {
       { status: 400 },
     );
     await expectError(await post({ ...VALID, conversationId: CONVERSATION_ID }), 404, "not_found");
+    expect(after).not.toHaveBeenCalled();
+    expect(rpcCalls("save_chat_turn")).toEqual([]);
   });
 });
 
