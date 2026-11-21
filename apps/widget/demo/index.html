@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Widget demo — plain HTML host page</title>
+    <!--
+      A plain customer page for checking the widget (docs/project.md §6.5).
+      No framework. Serve it from a different origin than the app, e.g.:
+
+        python3 -m http.server 5500 --directory apps/widget/demo
+
+      then paste the Install tab's snippet where WIDGET_SNIPPET is below.
+
+      The CSS is deliberately hostile: if any of it reaches the widget
+      button, isolation (shadow root + :host !important) is broken.
+    -->
+    <style>
+      * {
+        all: unset;
+        box-sizing: content-box !important;
+        font-family: "Comic Sans MS", cursive !important;
+      }
+      /* `all: unset` above would show <head>'s title and this CSS as text. */
+      head,
+      head * {
+        display: none !important;
+      }
+      html,
+      body {
+        display: block;
+        background: #ffe600 !important;
+        color: #ff00aa !important;
+        margin: 0;
+        padding: 24px;
+      }
+      h1,
+      p {
+        display: block;
+        margin: 0 0 12px;
+      }
+      h1 {
+        font-size: 32px;
+      }
+      button,
+      iframe,
+      [role="button"] {
+        display: none !important;
+        transform: rotate(45deg) scale(3) !important;
+        background: lime !important;
+        position: static !important;
+        opacity: 0.1 !important;
+      }
+      div,
+      span,
+      section {
+        position: relative !important;
+        z-index: 2147483647 !important;
+        font-size: 40px !important;
+        filter: invert(1) !important;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Plain HTML customer site</h1>
+    <p>
+      This page hides every button and iframe and restyles everything with
+      <code>!important</code>. The chat button should still appear in the corner, looking normal.
+    </p>
+    <div>A hostile div</div>
+    <button type="button">This page's own button (hidden by its own CSS)</button>
+
+    <!-- WIDGET_SNIPPET -->
+  </body>
+</html>
