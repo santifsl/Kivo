@@ -21,6 +21,11 @@
         box-sizing: content-box !important;
         font-family: "Comic Sans MS", cursive !important;
       }
+      /* `all: unset` above would show <head>'s title and this CSS as text. */
+      head,
+      head * {
+        display: none !important;
+      }
       html,
       body {
         display: block;

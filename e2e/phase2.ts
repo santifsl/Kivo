@@ -5,6 +5,8 @@
 // at the end.
 //
 //   pnpm e2e:phase2 <app-url>            e.g. https://kivo-git-….vercel.app
+//   pnpm e2e:phase2 <app-url> --key pk_… widget checks only, for an existing
+//                                        project (skips sign-up, create, delete)
 //                                        or   http://localhost:3000 (pnpm dev)
 //
 // Vercel previews are protected: set VERCEL_AUTOMATION_BYPASS_SECRET and the
@@ -43,6 +45,11 @@ function parseAppOrigin(arg: string | undefined): string {
 }
 
 const appOrigin = parseAppOrigin(process.argv[2]);
+const keyFlag = process.argv.indexOf("--key");
+const existingKey = keyFlag === -1 ? null : (process.argv[keyFlag + 1] ?? "");
+if (existingKey !== null && !/^pk_[A-Za-z0-9_-]{8,64}$/.test(existingKey)) {
+  throw new Error(`--key needs a public key (pk_…), got "${existingKey}"`);
+}
 const bypassSecret = process.env.VERCEL_AUTOMATION_BYPASS_SECRET ?? "";
 if (appOrigin === DEMO_ORIGIN) throw new Error(`The app must not run on ${DEMO_ORIGIN}`);
 
@@ -63,7 +70,8 @@ async function screenshot(page: Page, name: string): Promise<void> {
   log(`    screenshot: ${file}`);
 }
 
-async function step<T>(name: string, fn: () => Promise<T>): Promise<T> {
+/** Runs one step; on failure, logs the error and screenshots `page` as it was. */
+async function step<T>(name: string, page: Page, fn: () => Promise<T>): Promise<T> {
   const started = Date.now();
   try {
     const result = await fn();
@@ -72,6 +80,8 @@ async function step<T>(name: string, fn: () => Promise<T>): Promise<T> {
   } catch (error) {
     log(`✗ ${name} (${Date.now() - started} ms)`);
     log(`    ${(error as Error).message.split("\n").join("\n    ")}`);
+    log(`    page: ${page.url()}`);
+    await screenshot(page, "FAILED").catch(() => undefined);
     throw error;
   }
 }
@@ -152,7 +162,10 @@ async function copySnippet(page: Page, name: string): Promise<string> {
     src !== undefined && new URL(src).origin === appOrigin,
     `Snippet's script src ${src} isn't on ${appOrigin}`,
   );
-  check(/data-key="pk_[A-Za-z0-9_-]{8,64}"/.test(copied), `Snippet has no valid data-key: ${copied}`);
+  check(
+    /data-key="pk_[A-Za-z0-9_-]{8,64}"/.test(copied),
+    `Snippet has no valid data-key: ${copied}`,
+  );
   return copied;
 }
 
@@ -171,7 +184,7 @@ async function checkWidget(page: Page): Promise<void> {
   const button = page.locator("chat-widget-host button");
   const panel = page.locator("chat-widget-host iframe");
 
-  await step("demo page on another origin shows the button", async () => {
+  await step("demo page on another origin shows the button", page, async () => {
     await page.goto(`${DEMO_ORIGIN}/index.html`);
     await button.waitFor({ state: "visible", timeout: TIMEOUT_MS });
     // The page's CSS hides every <button> and rotates/fades it; none of that may reach ours.
@@ -192,18 +205,18 @@ async function checkWidget(page: Page): Promise<void> {
     await screenshot(page, "demo-button");
   });
 
-  await step("click → panel opens", async () => {
+  await step("click → panel opens", page, async () => {
     await button.click();
     await panel.waitFor({ state: "visible", timeout: TIMEOUT_MS });
     check((await button.getAttribute("aria-expanded")) === "true", "aria-expanded isn't true");
     const frame = page.frameLocator("chat-widget-host iframe");
-    await frame.getByLabel("Message").waitFor({ timeout: TIMEOUT_MS });
+    await frame.getByRole("textbox", { name: "Message" }).waitFor({ timeout: TIMEOUT_MS });
     await screenshot(page, "panel-open");
   });
 
-  await step('send "Hello" → mock reply shows', async () => {
+  await step('send "Hello" → mock reply shows', page, async () => {
     const frame = page.frameLocator("chat-widget-host iframe");
-    await frame.getByLabel("Message").fill("Hello");
+    await frame.getByRole("textbox", { name: "Message" }).fill("Hello");
     await frame.getByRole("button", { name: "Send" }).click();
     await frame.locator('[data-role="visitor"]', { hasText: "Hello" }).waitFor();
     const reply = frame.locator('[data-role="bot"]').last();
@@ -214,7 +227,7 @@ async function checkWidget(page: Page): Promise<void> {
     await screenshot(page, "mock-reply");
   });
 
-  await step("close works", async () => {
+  await step("close works", page, async () => {
     await page.frameLocator("chat-widget-host iframe").getByLabel("Close chat").click();
     await panel.waitFor({ state: "hidden", timeout: TIMEOUT_MS });
     check((await button.getAttribute("aria-expanded")) === "false", "aria-expanded isn't false");
@@ -222,15 +235,17 @@ async function checkWidget(page: Page): Promise<void> {
     await screenshot(page, "panel-closed");
   });
 
-  await step("no console errors or exceptions on the demo page", async () => {
+  await step("no console errors or exceptions on the demo page", page, async () => {
     check(errors.length === 0, errors.join("\n"));
   });
 }
 
 async function checkBadKey(page: Page): Promise<void> {
   const errors = watchErrors(page);
-  await step("bad key → nothing renders, no errors from the widget", async () => {
-    const config = page.waitForResponse((r) => r.url().startsWith(`${appOrigin}/api/widget/config`));
+  await step("bad key → nothing renders, no errors from the widget", page, async () => {
+    const config = page.waitForResponse((r) =>
+      r.url().startsWith(`${appOrigin}/api/widget/config`),
+    );
     await page.goto(`${DEMO_ORIGIN}/bad-key.html`);
     const response = await config;
     log(`    config request: ${response.status()} ${response.url()}`);
@@ -252,7 +267,9 @@ async function deleteProject(page: Page, name: string): Promise<void> {
   await page.goto(`${appOrigin}/dashboard`);
   await page.getByRole("button", { name: `Delete ${name}` }).click();
   await page.getByRole("button", { name: "Delete project", exact: true }).click();
-  await page.getByRole("link", { name, exact: true }).waitFor({ state: "detached", timeout: TIMEOUT_MS });
+  await page
+    .getByRole("link", { name, exact: true })
+    .waitFor({ state: "detached", timeout: TIMEOUT_MS });
 }
 
 // ---------------------------------------------------------------------------
@@ -262,7 +279,9 @@ async function deleteProject(page: Page, name: string): Promise<void> {
 async function main(): Promise<number> {
   await mkdir(outDir, { recursive: true });
   log(`Phase 2 check against ${appOrigin}, demo site ${DEMO_ORIGIN}`);
-  log(`Vercel bypass header: ${bypassSecret ? "on" : "off (VERCEL_AUTOMATION_BYPASS_SECRET not set)"}`);
+  log(
+    `Vercel bypass header: ${bypassSecret ? "on" : "off (VERCEL_AUTOMATION_BYPASS_SECRET not set)"}`,
+  );
 
   const browser = await chromium.launch();
   const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
@@ -270,6 +289,12 @@ async function main(): Promise<number> {
   await addBypass(context);
 
   const app = await context.newPage();
+  // Requests the browser couldn't complete (blocked, DNS, CSP): the usual
+  // reason a Clerk or widget step hangs.
+  app.on("requestfailed", (r) => log(`    request failed: ${r.failure()?.errorText} ${r.url()}`));
+  app.on("console", (m) => {
+    if (m.type() === "error") log(`    app console error: ${m.text()}`);
+  });
   const email = `kivo-e2e-${Date.now()}+clerk_test@example.com`;
   const projectName = `E2E ${runId.slice(0, 19)}`;
   let created = false;
@@ -277,18 +302,25 @@ async function main(): Promise<number> {
   let failed = false;
 
   try {
-    await step(`sign up as ${email}`, () => signUp(app, email));
-    await step(`create project "${projectName}"`, async () => {
-      await createProject(app, projectName);
-      created = true;
-      await screenshot(app, "project-created");
-    });
-    const snippet = await step("open Install and copy the snippet", async () => {
-      const s = await copySnippet(app, projectName);
-      log(`    snippet: ${s}`);
-      await screenshot(app, "install");
-      return s;
-    });
+    let snippet: string;
+    if (existingKey) {
+      // Same tag the Install page shows (apps/web/components/install).
+      snippet = `<script src="${appOrigin}/widget.js" data-key="${existingKey}" async></script>`;
+      log(`--key given: skipping sign-up and project steps. Snippet: ${snippet}`);
+    } else {
+      await step(`sign up as ${email}`, app, () => signUp(app, email));
+      await step(`create project "${projectName}"`, app, async () => {
+        await createProject(app, projectName);
+        created = true;
+        await screenshot(app, "project-created");
+      });
+      snippet = await step("open Install and copy the snippet", app, async () => {
+        const s = await copySnippet(app, projectName);
+        log(`    snippet: ${s}`);
+        await screenshot(app, "install");
+        return s;
+      });
+    }
 
     const demo = await readFile(DEMO_FILE, "utf8");
     check(demo.includes(PLACEHOLDER), `${DEMO_FILE} has no ${PLACEHOLDER}`);
@@ -305,7 +337,7 @@ async function main(): Promise<number> {
   } finally {
     if (created) {
       try {
-        await step(`delete project "${projectName}"`, () => deleteProject(app, projectName));
+        await step(`delete project "${projectName}"`, app, () => deleteProject(app, projectName));
       } catch {
         failed = true;
       }
