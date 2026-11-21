@@ -76,6 +76,9 @@ async function screenshot(page: Page, name: string): Promise<void> {
   log(`    screenshot: ${file}`);
 }
 
+/** Errors step() has already logged, so main's catch doesn't log them twice. */
+const loggedErrors = new WeakSet<object>();
+
 /** Runs one step; on failure, logs the error and screenshots `page` as it was. */
 async function step<T>(name: string, page: Page, fn: () => Promise<T>): Promise<T> {
   const started = Date.now();
@@ -88,6 +91,7 @@ async function step<T>(name: string, page: Page, fn: () => Promise<T>): Promise<
     log(`    ${(error as Error).message.split("\n").join("\n    ")}`);
     log(`    page: ${page.url()}`);
     await screenshot(page, "FAILED").catch(() => undefined);
+    if (error instanceof Error) loggedErrors.add(error);
     throw error;
   }
 }
@@ -120,15 +124,28 @@ function startDemoServer(pages: Record<string, string>): Promise<Server> {
 // Steps
 // ---------------------------------------------------------------------------
 
-/** Adds the Vercel bypass header to every request for the app's origin. */
+/**
+ * Adds the Vercel bypass header to every request for the app's origin, and
+ * `x-vercel-set-bypass-cookie` to the first one (CLAUDE.md, "Checking your
+ * change on a Vercel preview"). The header still goes on every request: the
+ * widget's requests come from another origin, where the cookie may not be sent.
+ */
 async function addBypass(context: BrowserContext): Promise<void> {
   if (!bypassSecret) return;
+  let first = true;
   await context.route(
     (url) => url.origin === appOrigin,
-    (route) =>
-      route.continue({
-        headers: { ...route.request().headers(), "x-vercel-protection-bypass": bypassSecret },
-      }),
+    (route) => {
+      const headers: Record<string, string> = {
+        ...route.request().headers(),
+        "x-vercel-protection-bypass": bypassSecret,
+      };
+      if (first) {
+        headers["x-vercel-set-bypass-cookie"] = "true";
+        first = false;
+      }
+      return route.continue({ headers });
+    },
   );
 }
 
@@ -156,7 +173,7 @@ async function signUp(page: Page, email: string): Promise<void> {
 
 async function createProject(page: Page, name: string): Promise<void> {
   if (!page.url().startsWith(`${appOrigin}/dashboard`)) await page.goto(`${appOrigin}/dashboard`);
-  await page.getByLabel("New project").fill(name);
+  await page.getByRole("textbox", { name: "New project" }).fill(name);
   await page.getByRole("button", { name: "Create project" }).click();
   await page.getByRole("link", { name, exact: true }).waitFor({ timeout: TIMEOUT_MS });
 }
@@ -234,8 +251,14 @@ async function checkWidget(page: Page): Promise<void> {
     await frame.locator('[data-role="visitor"]', { hasText: "Hello" }).waitFor();
     const reply = frame.locator('[data-role="bot"]').last();
     await reply.waitFor({ timeout: TIMEOUT_MS });
-    const text = (await reply.textContent())?.trim() ?? "";
-    check(text.length > 0, "Bot reply is empty");
+    // The visible text only: each message starts with a screen-reader-only
+    // "Bot: " label, which would make an empty reply look non-empty.
+    const text = await reply.evaluate((el) => {
+      const copy = el.cloneNode(true) as HTMLElement;
+      copy.querySelectorAll(".sr-only").forEach((label) => label.remove());
+      return (copy.textContent ?? "").trim();
+    });
+    check(text.length > 0, "Bot reply has no visible text");
     log(`    reply: "${text}"`);
     await screenshot(page, "mock-reply");
   });
@@ -262,11 +285,14 @@ async function checkBadKey(page: Page): Promise<void> {
     await page.goto(`${DEMO_ORIGIN}/bad-key.html`);
     const response = await config;
     log(`    config request: ${response.status()} ${response.url()}`);
+    // An unknown key is a 404. Anything else (a 500, say) is a bug the loader
+    // would also hide, so it fails here rather than passing as "nothing rendered".
+    check(response.status() === 404, `Expected 404 for an unknown key, got ${response.status()}`);
     await page.waitForTimeout(1500); // give a (wrong) render time to happen
     check((await page.locator("chat-widget-host").count()) === 0, "The widget rendered");
     // Chrome logs every non-2xx fetch as "Failed to load resource" for the URL
-    // itself. That's the browser reporting the 404, not the widget; anything
-    // else counts.
+    // itself. That's the browser reporting the 404 checked above, not the
+    // widget; anything else counts.
     const fromWidget = errors.filter(
       (e) => !(e.includes("Failed to load resource") && e.includes("/api/widget/config")),
     );
@@ -276,13 +302,18 @@ async function checkBadKey(page: Page): Promise<void> {
   });
 }
 
-async function deleteProject(page: Page, name: string): Promise<void> {
+/** Deletes this run's project. Resolves to false when there's none to delete. */
+async function deleteProject(page: Page, name: string): Promise<boolean> {
   await page.goto(`${appOrigin}/dashboard`);
-  await page.getByRole("button", { name: `Delete ${name}` }).click();
+  await page.getByRole("textbox", { name: "New project" }).waitFor({ timeout: TIMEOUT_MS }); // list has rendered
+  const del = page.getByRole("button", { name: `Delete ${name}` });
+  if ((await del.count()) === 0) return false;
+  await del.click();
   await page.getByRole("button", { name: "Delete project", exact: true }).click();
   await page
     .getByRole("link", { name, exact: true })
     .waitFor({ state: "detached", timeout: TIMEOUT_MS });
+  return true;
 }
 
 // ---------------------------------------------------------------------------
@@ -310,7 +341,9 @@ async function main(): Promise<number> {
   });
   const email = `kivo-e2e-${Date.now()}+clerk_test@example.com`;
   const projectName = `E2E ${runId.slice(0, 19)}`;
-  let created = false;
+  // Set before the create request, so a project saved by the server but never
+  // shown on the page still gets cleaned up.
+  let createAttempted = false;
   let server: Server | null = null;
   let failed = false;
 
@@ -327,8 +360,8 @@ async function main(): Promise<number> {
       });
       await step(`sign up as ${email}`, app, () => signUp(app, email));
       await step(`create project "${projectName}"`, app, async () => {
+        createAttempted = true;
         await createProject(app, projectName);
-        created = true;
         await screenshot(app, "project-created");
       });
       snippet = await step("open Install and copy the snippet", app, async () => {
@@ -349,12 +382,20 @@ async function main(): Promise<number> {
 
     await checkWidget(await context.newPage());
     await checkBadKey(await context.newPage());
-  } catch {
+  } catch (error) {
+    // step() already logged its own failures; this catches setup outside a
+    // step (e.g. port 5500 in use).
+    if (!(error instanceof Error && loggedErrors.has(error))) {
+      log(`    ${error instanceof Error ? (error.stack ?? error.message) : String(error)}`);
+    }
     failed = true;
   } finally {
-    if (created) {
+    if (createAttempted) {
       try {
-        await step(`delete project "${projectName}"`, app, () => deleteProject(app, projectName));
+        await step(`delete project "${projectName}"`, app, async () => {
+          if (!(await deleteProject(app, projectName)))
+            log("    no such project: nothing to delete");
+        });
       } catch {
         failed = true;
       }

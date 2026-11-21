@@ -1,48 +1,48 @@
 Phase 2 check against https://kivo-git-p2p-t09-phase2-check-santifsl.vercel.app, demo site http://localhost:5500
 Vercel bypass header: on
-✓ get a Clerk testing token (440 ms)
-    app console error: Access to fetch at 'https://1-n2dtwqurx4yxmpnlovwzoz7bd4-rng3733n2nyupcgmxlk6qgnrce-p.client.protect.clerk.com/ins_3Lsh5AaSCqUsHoPUEw5Fee1jfmk/probe' from origin 'https://kivo-git-p2p-t09-phase2-check-santifsl.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
-    request failed: net::ERR_FAILED https://1-n2dtwqurx4yxmpnlovwzoz7bd4-rng3733n2nyupcgmxlk6qgnrce-p.client.protect.clerk.com/ins_3Lsh5AaSCqUsHoPUEw5Fee1jfmk/probe
+✓ get a Clerk testing token (325 ms)
+    app console error: Access to fetch at 'https://1-dvdwu36zrapnoczikacmd5kcx4-dggmuim2obomd4cqtfzfyx4j2u-p.client.protect.clerk.com/ins_3Lsh5AaSCqUsHoPUEw5Fee1jfmk/probe' from origin 'https://kivo-git-p2p-t09-phase2-check-santifsl.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+    request failed: net::ERR_FAILED https://1-dvdwu36zrapnoczikacmd5kcx4-dggmuim2obomd4cqtfzfyx4j2u-p.client.protect.clerk.com/ins_3Lsh5AaSCqUsHoPUEw5Fee1jfmk/probe
     app console error: Failed to load resource: net::ERR_FAILED
-    app console error: Access to fetch at 'https://1-n2dtwqurx4yxmpnlovwzoz7bd4-rng3733n2nyupcgmxlk6qgnrce-p.client.protect.clerk.com/ins_3Lsh5AaSCqUsHoPUEw5Fee1jfmk/probe' from origin 'https://kivo-git-p2p-t09-phase2-check-santifsl.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
-    request failed: net::ERR_FAILED https://1-n2dtwqurx4yxmpnlovwzoz7bd4-rng3733n2nyupcgmxlk6qgnrce-p.client.protect.clerk.com/ins_3Lsh5AaSCqUsHoPUEw5Fee1jfmk/probe
+    app console error: Access to fetch at 'https://1-dvdwu36zrapnoczikacmd5kcx4-dggmuim2obomd4cqtfzfyx4j2u-p.client.protect.clerk.com/ins_3Lsh5AaSCqUsHoPUEw5Fee1jfmk/probe' from origin 'https://kivo-git-p2p-t09-phase2-check-santifsl.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+    request failed: net::ERR_FAILED https://1-dvdwu36zrapnoczikacmd5kcx4-dggmuim2obomd4cqtfzfyx4j2u-p.client.protect.clerk.com/ins_3Lsh5AaSCqUsHoPUEw5Fee1jfmk/probe
     app console error: Failed to load resource: net::ERR_FAILED
-    app console error: Access to fetch at 'https://1-n2dtwqurx4yxmpnlovwzoz7bd4-rng3733n2nyupcgmxlk6qgnrce-p.client.protect.clerk.com/ins_3Lsh5AaSCqUsHoPUEw5Fee1jfmk/probe' from origin 'https://kivo-git-p2p-t09-phase2-check-santifsl.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
-    request failed: net::ERR_FAILED https://1-n2dtwqurx4yxmpnlovwzoz7bd4-rng3733n2nyupcgmxlk6qgnrce-p.client.protect.clerk.com/ins_3Lsh5AaSCqUsHoPUEw5Fee1jfmk/probe
+    app console error: Access to fetch at 'https://1-dvdwu36zrapnoczikacmd5kcx4-dggmuim2obomd4cqtfzfyx4j2u-p.client.protect.clerk.com/ins_3Lsh5AaSCqUsHoPUEw5Fee1jfmk/probe' from origin 'https://kivo-git-p2p-t09-phase2-check-santifsl.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+    request failed: net::ERR_FAILED https://1-dvdwu36zrapnoczikacmd5kcx4-dggmuim2obomd4cqtfzfyx4j2u-p.client.protect.clerk.com/ins_3Lsh5AaSCqUsHoPUEw5Fee1jfmk/probe
     app console error: Failed to load resource: net::ERR_FAILED
-    app console error: Access to fetch at 'https://1-n2dtwqurx4yxmpnlovwzoz7bd4-rng3733n2nyupcgmxlk6qgnrce-p.client.protect.clerk.com/ins_3Lsh5AaSCqUsHoPUEw5Fee1jfmk/probe' from origin 'https://kivo-git-p2p-t09-phase2-check-santifsl.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
-    request failed: net::ERR_FAILED https://1-n2dtwqurx4yxmpnlovwzoz7bd4-rng3733n2nyupcgmxlk6qgnrce-p.client.protect.clerk.com/ins_3Lsh5AaSCqUsHoPUEw5Fee1jfmk/probe
+    app console error: Access to fetch at 'https://1-dvdwu36zrapnoczikacmd5kcx4-dggmuim2obomd4cqtfzfyx4j2u-p.client.protect.clerk.com/ins_3Lsh5AaSCqUsHoPUEw5Fee1jfmk/probe' from origin 'https://kivo-git-p2p-t09-phase2-check-santifsl.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+    request failed: net::ERR_FAILED https://1-dvdwu36zrapnoczikacmd5kcx4-dggmuim2obomd4cqtfzfyx4j2u-p.client.protect.clerk.com/ins_3Lsh5AaSCqUsHoPUEw5Fee1jfmk/probe
     app console error: Failed to load resource: net::ERR_FAILED
-    app console error: Access to fetch at 'https://1-n2dtwqurx4yxmpnlovwzoz7bd4-rng3733n2nyupcgmxlk6qgnrce-p.client.protect.clerk.com/ins_3Lsh5AaSCqUsHoPUEw5Fee1jfmk/probe' from origin 'https://kivo-git-p2p-t09-phase2-check-santifsl.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
-    request failed: net::ERR_FAILED https://1-n2dtwqurx4yxmpnlovwzoz7bd4-rng3733n2nyupcgmxlk6qgnrce-p.client.protect.clerk.com/ins_3Lsh5AaSCqUsHoPUEw5Fee1jfmk/probe
+    app console error: Access to fetch at 'https://1-dvdwu36zrapnoczikacmd5kcx4-dggmuim2obomd4cqtfzfyx4j2u-p.client.protect.clerk.com/ins_3Lsh5AaSCqUsHoPUEw5Fee1jfmk/probe' from origin 'https://kivo-git-p2p-t09-phase2-check-santifsl.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+    request failed: net::ERR_FAILED https://1-dvdwu36zrapnoczikacmd5kcx4-dggmuim2obomd4cqtfzfyx4j2u-p.client.protect.clerk.com/ins_3Lsh5AaSCqUsHoPUEw5Fee1jfmk/probe
     app console error: Failed to load resource: net::ERR_FAILED
     app console error: Failed to load resource: the server responded with a status of 403 (Forbidden)
     app console error: Failed to load resource: the server responded with a status of 403 (Forbidden)
     app console error: Failed to load resource: the server responded with a status of 403 (Forbidden)
     app console error: Failed to load resource: the server responded with a status of 403 (Forbidden)
-    app console error: Access to fetch at 'https://1-n2dtwqurx4yxmpnlovwzoz7bd4-rng3733n2nyupcgmxlk6qgnrce-p.client.protect.clerk.com/ins_3Lsh5AaSCqUsHoPUEw5Fee1jfmk/c/1-n2dtwqurx4yxmpnlovwzoz7bd4-rng3733n2nyupcgmxlk6qgnrce/probe' from origin 'https://kivo-git-p2p-t09-phase2-check-santifsl.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
-    request failed: net::ERR_FAILED https://1-n2dtwqurx4yxmpnlovwzoz7bd4-rng3733n2nyupcgmxlk6qgnrce-p.client.protect.clerk.com/ins_3Lsh5AaSCqUsHoPUEw5Fee1jfmk/c/1-n2dtwqurx4yxmpnlovwzoz7bd4-rng3733n2nyupcgmxlk6qgnrce/probe
+    app console error: Access to fetch at 'https://1-dvdwu36zrapnoczikacmd5kcx4-dggmuim2obomd4cqtfzfyx4j2u-p.client.protect.clerk.com/ins_3Lsh5AaSCqUsHoPUEw5Fee1jfmk/c/1-dvdwu36zrapnoczikacmd5kcx4-dggmuim2obomd4cqtfzfyx4j2u/probe' from origin 'https://kivo-git-p2p-t09-phase2-check-santifsl.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+    request failed: net::ERR_FAILED https://1-dvdwu36zrapnoczikacmd5kcx4-dggmuim2obomd4cqtfzfyx4j2u-p.client.protect.clerk.com/ins_3Lsh5AaSCqUsHoPUEw5Fee1jfmk/c/1-dvdwu36zrapnoczikacmd5kcx4-dggmuim2obomd4cqtfzfyx4j2u/probe
     app console error: Failed to load resource: net::ERR_FAILED
     screenshot: 01-sign-up-code.png
-✓ sign up as kivo-e2e-1795225543154+clerk_test@example.com (8517 ms)
+✓ sign up as kivo-e2e-1795225850356+clerk_test@example.com (5749 ms)
     screenshot: 02-project-created.png
-✓ create project "E2E 2026-11-21T01-45-43" (2655 ms)
-    snippet: <script src="https://kivo-git-p2p-t09-phase2-check-santifsl.vercel.app/widget.js" data-key="pk_M05P9NgB9-YHtbKS-mKZVSGC3nBms-Eo" async></script>
+✓ create project "E2E 2026-11-21T01-50-50" (3665 ms)
+    snippet: <script src="https://kivo-git-p2p-t09-phase2-check-santifsl.vercel.app/widget.js" data-key="pk_QtrhsjM1MW0ihzLDhXJS_viJpdrTnRUP" async></script>
     screenshot: 03-install.png
-✓ open Install and copy the snippet (2629 ms)
+✓ open Install and copy the snippet (2199 ms)
     screenshot: 04-demo-button.png
-✓ demo page on another origin shows the button (1017 ms)
+✓ demo page on another origin shows the button (921 ms)
     screenshot: 05-panel-open.png
-✓ click → panel opens (1473 ms)
-    reply: "Bot: Thanks for your message! This is a preview reply. Real answers from your knowledge base come soon."
+✓ click → panel opens (1976 ms)
+    reply: "Thanks for your message! This is a preview reply. Real answers from your knowledge base come soon."
     screenshot: 06-mock-reply.png
-✓ send "Hello" → mock reply shows (1368 ms)
+✓ send "Hello" → mock reply shows (1415 ms)
     screenshot: 07-panel-closed.png
 ✓ close works (342 ms)
 ✓ no console errors or exceptions on the demo page (0 ms)
     config request: 404 https://kivo-git-p2p-t09-phase2-check-santifsl.vercel.app/api/widget/config?key=pk_e2e_unknown_key_000
     browser console: Failed to load resource: the server responded with a status of 404 () (https://kivo-git-p2p-t09-phase2-check-santifsl.vercel.app/api/widget/config?key=pk_e2e_unknown_key_000)
     screenshot: 08-bad-key.png
-✓ bad key → nothing renders, no errors from the widget (1989 ms)
-✓ delete project "E2E 2026-11-21T01-45-43" (2366 ms)
+✓ bad key → nothing renders, no errors from the widget (2175 ms)
+✓ delete project "E2E 2026-11-21T01-50-50" (2661 ms)
 PASSED
