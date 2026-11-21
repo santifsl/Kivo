@@ -9,11 +9,27 @@ function sentences(n: number, prefix = "Sentence"): string {
   ).join(" ");
 }
 
-/** Every word of `text`, in order, ignoring overlap repeats between chunks. */
-function wordsCovered(chunks: string[], text: string): boolean {
-  const joined = chunks.join(" ");
-  return text.split(/\s+/).every((w) => joined.includes(w));
+/**
+ * The chunks joined back into one text, with each chunk's overlap removed:
+ * the longest start of a chunk (up to `overlap` characters) that the text so
+ * far ends with. Use it on text without long repeats, where that is the real
+ * overlap.
+ */
+function stitch(chunks: readonly string[], overlap = CHUNK_OVERLAP_CHARS): string {
+  let out = chunks[0] ?? "";
+  for (const chunk of chunks.slice(1)) {
+    let k = Math.min(overlap, chunk.length);
+    while (k > 0 && !out.endsWith(chunk.slice(0, k))) k--;
+    out += chunk.slice(k);
+  }
+  return out;
 }
+
+/** No lone surrogate: in `u` mode a valid pair is one code point, so `\p{Cs}` only matches halves. */
+const wellFormed = (text: string) => !/\p{Cs}/u.test(text);
+
+/** The words of `text`, in order, repeats included. */
+const words = (text: string) => text.split(/\s+/).filter(Boolean);
 
 describe("chunkText", () => {
   it("defaults to ~800–1,000 tokens per chunk with a small overlap", () => {
@@ -59,7 +75,14 @@ describe("chunkText", () => {
       // Each chunk ends on a sentence.
       expect(chunk.endsWith(".")).toBe(true);
     }
-    expect(wordsCovered(chunks, text)).toBe(true);
+    expect(words(stitch(chunks))).toEqual(words(text));
+  });
+
+  it("stitch catches a dropped or reordered word", () => {
+    const text = "word1 word10 word2 word3";
+    expect(words(stitch(["word10 word2 word3"]))).not.toEqual(words(text));
+    expect(words(stitch(["word1 word10", "word3 word2"]))).not.toEqual(words(text));
+    expect(words(stitch(["word1 word10", "word10 word2 word3"]))).toEqual(words(text));
   });
 
   it("repeats the end of each chunk at the start of the next, from a sentence", () => {
@@ -80,7 +103,37 @@ describe("chunkText", () => {
       expect(chunk.length).toBeLessThanOrEqual(CHUNK_MAX_CHARS);
       expect(chunk).toMatch(/^word\d+( word\d+)*$/);
     }
-    expect(wordsCovered(chunks, text)).toBe(true);
+    expect(words(stitch(chunks))).toEqual(words(text));
+  });
+
+  it("handles a huge paragraph without overflowing the stack", () => {
+    // 300,000 words in one paragraph (1.5 MB): far too many pieces to spread into push().
+    const text = "word ".repeat(300_000);
+    const chunks = chunkText(text);
+    expect(chunks.length).toBeGreaterThan(400);
+    for (const chunk of chunks) {
+      expect(chunk.length).toBeLessThanOrEqual(CHUNK_MAX_CHARS);
+      expect(chunk).toMatch(/^word( word)*$/);
+    }
+    // Without overlap the words can be counted exactly.
+    const plain = chunkText(text, { overlapChars: 0 });
+    expect(plain.reduce((n, c) => n + words(c).length, 0)).toBe(300_000);
+  });
+
+  it("splits a grapheme longer than the limit between code points", () => {
+    const family = "👩‍👩‍👧"; // one grapheme, 8 UTF-16 units
+    const chunks = chunkText(family, { maxChars: 5, overlapChars: 0 });
+    expect(chunks.join("")).toBe(family);
+    for (const chunk of chunks) {
+      expect(chunk.length).toBeLessThanOrEqual(5);
+      expect(wellFormed(chunk)).toBe(true); // no split surrogate pair
+    }
+
+    // A letter with thousands of combining marks, at the default size.
+    const zalgo = "e" + "\u0301".repeat(10_000);
+    const zalgoChunks = chunkText(zalgo, { overlapChars: 0 });
+    expect(zalgoChunks.join("")).toBe(zalgo);
+    for (const chunk of zalgoChunks) expect(chunk.length).toBeLessThanOrEqual(CHUNK_MAX_CHARS);
   });
 
   it("splits one giant word without breaking characters", () => {
@@ -92,6 +145,7 @@ describe("chunkText", () => {
       expect(chunk).toMatch(/^(?:🙂)+$/u);
     }
     expect(chunks.join("")).toBe(text);
+    for (const chunk of chunks) expect(wellFormed(chunk)).toBe(true);
   });
 
   it("keeps unicode text intact", () => {
@@ -104,8 +158,9 @@ describe("chunkText", () => {
     expect(chunks.length).toBeGreaterThan(1);
     for (const chunk of chunks) {
       expect(chunk.length).toBeLessThanOrEqual(CHUNK_MAX_CHARS);
-      expect(chunk).not.toMatch(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])/); // no lone high surrogate
+      expect(wellFormed(chunk)).toBe(true);
     }
+    expect(stitch(chunks)).toBe(long);
     // No spaces added between CJK sentences: every chunk is a slice of the text.
     for (const chunk of chunks) expect(long).toContain(chunk);
     expect(chunks[1]).toMatch(/^第\d+文/); // the overlap starts at a sentence

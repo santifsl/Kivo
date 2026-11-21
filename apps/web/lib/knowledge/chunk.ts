@@ -39,42 +39,49 @@ function pack(parts: readonly string[], sep: string, limit: number): string[] {
   return out;
 }
 
-/** Splits text with no whitespace into slices of at most `limit`, never inside a character. */
+/**
+ * Splits text with no whitespace into slices of at most `limit`, never inside
+ * a character. A grapheme longer than `limit` (an emoji ZWJ sequence, or a
+ * letter with thousands of combining marks) is split between its code points,
+ * so no slice exceeds the limit; `limit` is at least 2, so a code point fits.
+ */
 function hardSplit(word: string, limit: number): string[] {
-  const chars = Array.from(graphemes.segment(word), (s) => s.segment);
-  return pack(chars, "", limit);
-}
-
-/** Splits an over-long sentence on whitespace, falling back to `hardSplit` for huge words. */
-function splitSentence(sentence: string, limit: number): Piece[] {
-  const pieces: Piece[] = [];
-  for (const word of sentence.split(/\s+/).filter(Boolean)) {
-    const slices = word.length <= limit ? [word] : hardSplit(word, limit);
-    slices.forEach((text, i) => pieces.push({ text, sep: i === 0 ? " " : "" }));
+  const parts: string[] = [];
+  for (const { segment } of graphemes.segment(word)) {
+    if (segment.length <= limit) parts.push(segment);
+    else for (const codePoint of pack(Array.from(segment), "", limit)) parts.push(codePoint);
   }
-  return pieces;
+  return pack(parts, "", limit);
 }
 
-/** Splits an over-long paragraph on sentences, then on words. */
-function splitParagraph(paragraph: string, limit: number): Piece[] {
-  const pieces: Piece[] = [];
-  let sep = "";
+// The split helpers append to `out` with a loop: a huge paragraph can make
+// hundreds of thousands of pieces, too many to spread into `push(...)`.
+
+/** Appends an over-long sentence split on whitespace, falling back to `hardSplit` for huge words. */
+function splitSentence(sentence: string, sep: string, limit: number, out: Piece[]): void {
+  let next = sep;
+  for (const word of sentence.split(/\s+/)) {
+    if (!word) continue;
+    const slices = word.length <= limit ? [word] : hardSplit(word, limit);
+    for (const [i, text] of slices.entries()) out.push({ text, sep: i === 0 ? next : "" });
+    next = " ";
+  }
+}
+
+/** Appends an over-long paragraph split on sentences, then on words. */
+function splitParagraph(paragraph: string, sep: string, limit: number, out: Piece[]): void {
+  let next = sep;
   for (const { segment } of sentences.segment(paragraph)) {
     const text = segment.trim();
     if (text) {
-      if (text.length <= limit) pieces.push({ text, sep });
-      else {
-        const parts = splitSentence(text, limit);
-        if (parts[0]) parts[0].sep = sep;
-        pieces.push(...parts);
-      }
+      if (text.length <= limit) out.push({ text, sep: next });
+      else splitSentence(text, next, limit, out);
     }
     // Join the next sentence the way the text did: a line break, a space, or
     // nothing (CJK sentences have no space between them).
     const gap = segment.slice(segment.trimEnd().length);
-    sep = gap.includes("\n") ? "\n" : gap ? " " : "";
+    next = gap.includes("\n") ? "\n" : gap ? " " : "";
   }
-  return pieces;
 }
 
 /** Paragraphs, sentences, words, then characters: the largest units that fit in `limit`. */
@@ -83,10 +90,8 @@ function toPieces(text: string, limit: number): Piece[] {
   for (const paragraph of text.split(/\n\s*\n/)) {
     const trimmed = paragraph.trim();
     if (!trimmed) continue;
-    const parts =
-      trimmed.length <= limit ? [{ text: trimmed, sep: "" }] : splitParagraph(trimmed, limit);
-    if (parts[0]) parts[0].sep = "\n\n";
-    pieces.push(...parts);
+    if (trimmed.length <= limit) pieces.push({ text: trimmed, sep: "\n\n" });
+    else splitParagraph(trimmed, "\n\n", limit, pieces);
   }
   return pieces;
 }
@@ -112,12 +117,15 @@ function overlapTail(chunk: string, max: number): string {
 }
 
 /**
- * Splits text into chunks of at most `maxChars` characters (~800–1,000
- * tokens by default). Breaks between paragraphs where it can, then between
- * sentences, then between words; splits inside a word only when one word
- * is longer than a chunk. Each chunk after the first starts with up to
- * `overlapChars` characters from the end of the one before, from a word
- * boundary. Pure and deterministic. Empty or whitespace-only text gives `[]`.
+ * Splits text into chunks of at most `maxChars` characters (UTF-16 code
+ * units, as `string.length` counts them; ~800–1,000 tokens by default). No
+ * chunk is ever longer. Breaks between paragraphs where it can, then between
+ * sentences, then between words; splits inside a word only when one word is
+ * longer than a chunk, and inside a grapheme only when one grapheme is (never
+ * inside a code point). Each chunk after the first starts with up to
+ * `overlapChars` characters from the end of the one before, from a sentence
+ * or word boundary. Pure and deterministic. Empty or whitespace-only text
+ * gives `[]`.
  */
 export function chunkText(text: string, options: ChunkOptions = {}): string[] {
   const maxChars = options.maxChars ?? CHUNK_MAX_CHARS;
@@ -131,7 +139,7 @@ export function chunkText(text: string, options: ChunkOptions = {}): string[] {
 
   // Leave room for the overlap and its separator, so every chunk fits in maxChars.
   const limit = overlapChars > 0 ? maxChars - overlapChars - 2 : maxChars;
-  if (limit < 1) throw new RangeError("maxChars is too small for overlapChars");
+  if (limit < 2) throw new RangeError("maxChars is too small for overlapChars");
   const chunks: string[] = [];
   let cur = "";
   for (const { text: piece, sep } of toPieces(text, limit)) {
