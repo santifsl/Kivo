@@ -25,7 +25,7 @@ export function ProjectTabsView({
                 href={projectTabHref(projectId, tab)}
                 aria-current={active ? "page" : undefined}
                 className={cn(
-                  "flex h-10 items-center border-b-2 px-3 text-sm whitespace-nowrap transition-colors",
+                  "flex h-10 items-center border-b-2 px-2 text-sm whitespace-nowrap transition-colors sm:px-3",
                   "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink",
                   active ? "border-ink font-medium text-ink" : "border-transparent text-ink-muted hover:text-ink",
                 )}

@@ -1,0 +1,29 @@
+.stage {
+  background-image: radial-gradient(circle, var(--line) 1px, transparent 1px);
+  background-size: 16px 16px;
+}
+
+.panel {
+  animation: open-panel 200ms ease;
+}
+
+.panel[data-animation="slide"] {
+  --preview-offset: 16px;
+}
+
+.panel[data-animation="scale"] {
+  --preview-scale: 0.9;
+}
+
+@keyframes open-panel {
+  from {
+    opacity: 0;
+    transform: translateY(var(--preview-offset, 0)) scale(var(--preview-scale, 1));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panel {
+    animation: none;
+  }
+}

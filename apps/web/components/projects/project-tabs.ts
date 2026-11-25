@@ -5,11 +5,17 @@ export type ProjectTab = {
 };
 
 const KNOWLEDGE_TAB: ProjectTab = { label: "Knowledge", segment: "knowledge" };
+const CUSTOMIZE_TAB: ProjectTab = { label: "Customize", segment: "customize" };
 const INSTALL_TAB: ProjectTab = { label: "Install", segment: "install" };
 
 export const CONVERSATIONS_TAB: ProjectTab = { label: "Conversations", segment: "conversations" };
 
-export const PROJECT_TABS: readonly ProjectTab[] = [KNOWLEDGE_TAB, CONVERSATIONS_TAB, INSTALL_TAB];
+export const PROJECT_TABS: readonly ProjectTab[] = [
+  KNOWLEDGE_TAB,
+  CONVERSATIONS_TAB,
+  CUSTOMIZE_TAB,
+  INSTALL_TAB,
+];
 
 /** Where /dashboard/projects/[id] redirects. Install for now (P3K-T07). */
 export const DEFAULT_PROJECT_TAB: ProjectTab = INSTALL_TAB;

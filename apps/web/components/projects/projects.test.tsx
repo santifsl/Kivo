@@ -258,8 +258,13 @@ describe("projects API client", () => {
 describe("project tabs", () => {
   const id = project().id;
 
-  it("lists Knowledge, Conversations, and Install, with Install as the default", () => {
-    expect(PROJECT_TABS.map((t) => t.segment)).toEqual(["knowledge", "conversations", "install"]);
+  it("lists Customize alongside the other tabs and defaults to Install", () => {
+    expect(PROJECT_TABS.map((t) => t.segment)).toEqual([
+      "knowledge",
+      "conversations",
+      "customize",
+      "install",
+    ]);
     expect(DEFAULT_PROJECT_TAB.segment).toBe("install");
   });
 
@@ -267,6 +272,7 @@ describe("project tabs", () => {
     [`/dashboard/projects/${id}/install`, "install"],
     [`/dashboard/projects/${id}/conversations`, "conversations"],
     [`/dashboard/projects/${id}/conversations/${id}`, "conversations"],
+    [`/dashboard/projects/${id}/customize`, "customize"],
     [`/dashboard/projects/${id}/install/`, "install"],
     [`/dashboard/projects/${id}`, null],
     [`/dashboard/projects/${id}/installx`, null],
