@@ -11,7 +11,7 @@ import {
   type Plan,
   type WidgetConfig,
 } from "@kivo/shared";
-import { useState, type FormEvent } from "react";
+import { useId, useState, type FormEvent } from "react";
 import { Button } from "../ui/button";
 import { GlassPanel } from "../ui/glass-panel";
 import { WidgetPreview } from "./widget-preview";
@@ -42,6 +42,7 @@ export function CustomizeView({
   const [saved, setSaved] = useState(config);
   const [draft, setDraft] = useState(config);
   const [status, setStatus] = useState<SaveStatus>({ phase: "idle" });
+  const fieldId = useId();
   const changes = Object.entries(draft).filter(
     ([field, value]) => saved[field as keyof WidgetConfig] !== value,
   );
@@ -107,10 +108,11 @@ export function CustomizeView({
             <fieldset disabled={locked || saving} className="flex min-w-0 flex-col gap-4">
               <legend className="sr-only">Widget settings</legend>
               <div className="grid grid-cols-2 gap-3">
-                <label className={labelClass}>
-                  <span>Button color</span>
+                <div className={labelClass}>
+                  <label htmlFor={`${fieldId}-color`}>Button color</label>
                   <span className="flex h-10 items-center gap-2 rounded-md border border-line bg-glass-strong px-2">
                     <input
+                      id={`${fieldId}-color`}
                       type="color"
                       className="size-7 shrink-0 cursor-pointer rounded-sm focus-visible:outline-2 focus-visible:outline-ink disabled:cursor-not-allowed"
                       value={draft.button_color}
@@ -120,10 +122,11 @@ export function CustomizeView({
                       {draft.button_color}
                     </span>
                   </span>
-                </label>
-                <label className={labelClass}>
-                  Button position
+                </div>
+                <div className={labelClass}>
+                  <label htmlFor={`${fieldId}-position`}>Button position</label>
                   <select
+                    id={`${fieldId}-position`}
                     className={controlClass}
                     value={draft.position}
                     onChange={(event) =>
@@ -136,7 +139,7 @@ export function CustomizeView({
                       </option>
                     ))}
                   </select>
-                </label>
+                </div>
               </div>
               <label className={labelClass}>
                 Button label
@@ -148,9 +151,10 @@ export function CustomizeView({
                   required
                 />
               </label>
-              <label className={labelClass}>
-                Open animation
+              <div className={labelClass}>
+                <label htmlFor={`${fieldId}-animation`}>Open animation</label>
                 <select
+                  id={`${fieldId}-animation`}
                   className={controlClass}
                   value={draft.animation}
                   onChange={(event) =>
@@ -163,7 +167,7 @@ export function CustomizeView({
                     </option>
                   ))}
                 </select>
-              </label>
+              </div>
               <label className={labelClass}>
                 Header text
                 <input
