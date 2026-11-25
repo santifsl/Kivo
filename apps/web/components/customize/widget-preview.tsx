@@ -38,7 +38,7 @@ export function WidgetPreview({ config }: { config: WidgetConfig }) {
             type="button"
             aria-expanded={open}
             aria-controls={open ? panelId : undefined}
-            className="ph-no-capture min-h-12 max-w-full rounded-full px-5 py-2 text-[15px] font-semibold wrap-anywhere text-white shadow-glass-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+            className="ph-no-capture min-h-12 max-w-full rounded-full px-5 py-2 text-sm font-semibold wrap-anywhere text-white shadow-glass-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
             style={{ backgroundColor: config.button_color }}
             onClick={() => setOpen((current) => !current)}
           >
