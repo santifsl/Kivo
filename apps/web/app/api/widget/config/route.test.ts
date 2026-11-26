@@ -156,12 +156,15 @@ describe("GET /api/widget/config", () => {
 });
 
 describe("OPTIONS /api/widget/config", () => {
-  it("answers the preflight for any origin, GET only, no credentials", () => {
+  it("answers the preflight for any origin, GET only, without a config lookup", async () => {
     const res = OPTIONS();
     expect(res.status).toBe(204);
-    expect(res.headers.get("access-control-allow-origin")).toBe("*");
+    expectRouteHeaders(res);
     expect(res.headers.get("access-control-allow-methods")).toBe("GET, OPTIONS");
-    expect(res.headers.get("access-control-allow-credentials")).toBeNull();
+    expect(res.headers.get("access-control-allow-headers")).toBeNull();
     expect(res.headers.get("access-control-max-age")).toBe("86400");
+    expect(await res.text()).toBe("");
+    expect(protectConfig).not.toHaveBeenCalled();
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });

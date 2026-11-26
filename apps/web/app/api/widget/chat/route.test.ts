@@ -516,12 +516,16 @@ describe("POST /api/widget/chat — errors", () => {
 });
 
 describe("OPTIONS /api/widget/chat", () => {
-  it("answers the preflight for any origin, POST + JSON, no credentials", () => {
+  it("answers the preflight for any origin, POST + JSON, without running chat", async () => {
     const res = OPTIONS();
     expect(res.status).toBe(204);
-    expect(res.headers.get("access-control-allow-origin")).toBe("*");
+    expectRouteHeaders(res);
     expect(res.headers.get("access-control-allow-methods")).toBe("POST, OPTIONS");
     expect(res.headers.get("access-control-allow-headers")).toBe("Content-Type");
-    expect(res.headers.get("access-control-allow-credentials")).toBeNull();
+    expect(res.headers.get("access-control-max-age")).toBe("86400");
+    expect(await res.text()).toBe("");
+    expect(protectChat).not.toHaveBeenCalled();
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(openai.embeddings.create).not.toHaveBeenCalled();
   });
 });
