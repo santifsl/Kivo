@@ -37,6 +37,7 @@ const SECRET_ENV = ["SUPABASE", "SECRET", "KEY"].join("_");
 
 const KEY = "pk_test_abcdefgh";
 const PROJECT_ID = "11111111-1111-4111-8111-111111111111";
+const OTHER_PROJECT_ID = "44444444-4444-4444-8444-444444444444";
 const OWNER_ID = "user_owner";
 const CONVERSATION_ID = "22222222-2222-4222-8222-222222222222";
 const NEW_CONVERSATION_ID = "33333333-3333-4333-8333-333333333333";
@@ -47,8 +48,8 @@ const PASSAGES = ["Shipping to Canada takes 5–7 business days.", "Returns are 
 
 /** What PostgREST answers, per table or function. Tests override pieces. */
 interface Db {
-  project: { id: string; owner_id: string; accounts: { plan: string } | null } | null;
-  conversation: boolean;
+  project: { id: string; owner_id: string; accounts: { plan: string } | null };
+  conversationProjectId: string;
   consume: boolean;
   chunks: string[];
   save: Response | null;
@@ -61,15 +62,20 @@ const fetchMock = vi.fn<typeof fetch>();
 let calls: { path: string; body: unknown }[];
 
 function postgrest(url: string, init?: RequestInit): Response {
-  const { pathname } = new URL(url);
+  const { pathname, searchParams } = new URL(url);
   const body: unknown = typeof init?.body === "string" ? JSON.parse(init.body) : undefined;
   const path = pathname.replace("/rest/v1/", "");
   calls.push({ path, body });
   switch (path) {
     case "projects":
-      return Response.json(db.project ? [db.project] : []);
+      return Response.json(searchParams.get("public_key") === `eq.${KEY}` ? [db.project] : []);
     case "conversations":
-      return Response.json(db.conversation ? [{ id: CONVERSATION_ID }] : []);
+      return Response.json(
+        searchParams.get("id") === `eq.${CONVERSATION_ID}` &&
+          searchParams.get("project_id") === `eq.${db.conversationProjectId}`
+          ? [{ id: CONVERSATION_ID }]
+          : [],
+      );
     case "rpc/consume_message":
       return Response.json(db.consume);
     case "rpc/match_chunks":
@@ -156,7 +162,7 @@ beforeEach(() => {
   vi.stubEnv(SECRET_ENV, "sb_secret_test_456");
   db = {
     project: { id: PROJECT_ID, owner_id: OWNER_ID, accounts: { plan: "free" } },
-    conversation: true,
+    conversationProjectId: PROJECT_ID,
     consume: true,
     chunks: PASSAGES,
     save: null,
@@ -436,13 +442,12 @@ describe("POST /api/widget/chat — errors", () => {
   });
 
   it("unknown key: 404 not_found, nothing counted", async () => {
-    db.project = null;
-    await expectError(await post(VALID), 404, "not_found");
+    await expectError(await post({ ...VALID, key: "pk_test_unknown" }), 404, "not_found");
     expectNothingCountedOrSent();
   });
 
   it("a conversation of another project: 404 not_found, nothing counted", async () => {
-    db.conversation = false;
+    db.conversationProjectId = OTHER_PROJECT_ID;
     await expectError(await post({ ...VALID, conversationId: CONVERSATION_ID }), 404, "not_found");
     expect(after).not.toHaveBeenCalled();
     expectNothingCountedOrSent();
