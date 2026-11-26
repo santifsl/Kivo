@@ -250,7 +250,7 @@ async function deleteOwner(email: string, secret: string) {
 
 async function main(secret: string, protectionBypass: string) {
   const run = crypto.randomUUID();
-  const email = `kivo-phase5-widget-${run}+clerk_test@example.com`;
+  const email = `kivo-p5-widget-${run}+clerk_test@example.com`;
   const browser = await chromium.launch({
     executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH,
   });
