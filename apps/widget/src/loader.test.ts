@@ -63,13 +63,12 @@ describe("mount: render or nothing", () => {
     expect(document.querySelector("button, style, iframe")).toBeNull();
   });
 
-  it("fetches the config from the script's own origin", async () => {
+  it("fetches the config from the script's origin with same-origin credentials", async () => {
     const fetchMock = respond(200, { config: DEFAULT_WIDGET_CONFIG });
     await mount(script());
-    expect(fetchMock).toHaveBeenCalledWith(
-      `${APP}/api/widget/config?key=${KEY}`,
-      expect.anything(),
-    );
+    expect(fetchMock).toHaveBeenCalledWith(`${APP}/api/widget/config?key=${KEY}`, {
+      credentials: "same-origin",
+    });
   });
 
   it("renders the label as text, never HTML", async () => {

@@ -106,7 +106,8 @@ export async function mount(script: HTMLOrSVGScriptElement | null): Promise<HTML
     if (appOrigin === "null") return null;
 
     const res = await fetch(`${appOrigin}/api/widget/config?key=${encodeURIComponent(key)}`, {
-      credentials: "omit",
+      // Same-origin pages can use their Preview session; external embeds send no cookies.
+      credentials: "same-origin",
     });
     if (res.status !== 200) return null;
     const config = readConfig(await res.json());
