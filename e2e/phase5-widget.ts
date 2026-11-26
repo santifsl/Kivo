@@ -52,12 +52,18 @@ assert(
 assert(bypass, "VERCEL_AUTOMATION_BYPASS_SECRET is required for the Kivo preview.");
 
 async function allowPreview(context: BrowserContext, secret: string) {
+  let first = true;
   await context.route(
     (url) => url.origin === origin,
-    (route) =>
-      route.continue({
-        headers: { ...route.request().headers(), "x-vercel-protection-bypass": secret },
-      }),
+    async (route) => {
+      const headers = {
+        ...route.request().headers(),
+        "x-vercel-protection-bypass": secret,
+        ...(first && { "x-vercel-set-bypass-cookie": "true" }),
+      };
+      first = false;
+      await route.continue({ headers });
+    },
   );
 }
 
@@ -291,6 +297,8 @@ async function main(secret: string, protectionBypass: string) {
     });
     await allowPreview(visitor, protectionBypass);
     const installed = await visitor.newPage();
+    // Establish preview access before the separate origin loads the copied script.
+    assert.equal((await installed.goto(`${origin}/widget.js`))?.status(), 200);
     assert.equal((await installed.goto(`http://127.0.0.1:${address.port}`))?.status(), 200);
     await checkInstallation(installed, FREE_CONFIG);
 
