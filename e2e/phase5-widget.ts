@@ -205,7 +205,8 @@ async function checkInstallation(page: Page, expected: WidgetConfig) {
     };
   });
   assert.deepEqual(motion.opacity, ["0", "1"], "Expected the panel to fade in.");
-  assert.equal(motion.scale, expected.animation === "scale" ? 0.9 : 1);
+  const expectedScale = expected.animation === "scale" ? 0.9 : 1;
+  assert(Math.abs(motion.scale - expectedScale) < 0.001, "Unexpected starting scale.");
   assert.equal(motion.slides, expected.animation === "slide");
 
   const panel = host.frameLocator("iframe");
