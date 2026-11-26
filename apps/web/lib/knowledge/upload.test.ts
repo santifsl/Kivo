@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { MAX_EXTRACTED_TEXT_CHARS, MAX_KNOWLEDGE_FILE_BYTES } from "@kivo/shared";
 import { describe, expect, it } from "vitest";
-import { capText, hasPdfMagic, readUpload, UploadRefusedError } from "./upload";
+import { capText, hasPdfMagic, readUpload, UploadRefusedError, WORD_BREAK_WINDOW } from "./upload";
 
 const fixture = async (name: string) =>
   new Uint8Array(await readFile(new URL(`../../test/fixtures/knowledge/${name}`, import.meta.url)));
@@ -127,6 +127,21 @@ describe("capText", () => {
     const a = capText(`${"a".repeat(MAX - 1)}${accent}b`);
     expect(a).toEqual({ text: "a".repeat(MAX - 1), truncated: true });
     expect(a.text.endsWith("\u0301")).toBe(false);
+  });
+
+  it("ignores a word break far before the cap: a heading then unspaced CJK text keeps its body", () => {
+    const text = `Heading\n${"中".repeat(MAX)}`;
+    const out = capText(text);
+    expect(out.truncated).toBe(true);
+    expect(out.text.length).toBe(MAX);
+    expect(out.text.startsWith("Heading\n中中")).toBe(true);
+  });
+
+  it("uses a word break exactly at the edge of the window, not one just past it", () => {
+    const at = `${"a".repeat(MAX - WORD_BREAK_WINDOW)} ${"b".repeat(WORD_BREAK_WINDOW + 5)}`;
+    expect(capText(at).text).toBe("a".repeat(MAX - WORD_BREAK_WINDOW));
+    const before = `${"a".repeat(MAX - WORD_BREAK_WINDOW - 1)} ${"b".repeat(WORD_BREAK_WINDOW + 5)}`;
+    expect(capText(before).text.length).toBe(MAX);
   });
 
   it("takes any cap", () => {

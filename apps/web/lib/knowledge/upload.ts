@@ -30,22 +30,28 @@ export interface CappedText {
   truncated: boolean;
 }
 
+/** How far before the cap a word break may be to cut there instead of mid-word. */
+export const WORD_BREAK_WINDOW = 1000;
+
 const graphemes = new Intl.Segmenter("en", { granularity: "grapheme" });
 
 /**
  * At most `max` characters (UTF-16 code units) of normalized text. Over the
- * cap, cuts at the last whitespace at or before `max` (never mid-word, and a
- * break before whitespace is always a grapheme boundary); with no whitespace,
- * at the last grapheme boundary at or before `max`, so no emoji or accented
- * letter is split.
+ * cap, cuts at the last whitespace within `WORD_BREAK_WINDOW` characters
+ * before `max` (a break before whitespace is always a grapheme boundary).
+ * With no whitespace that close (say, CJK text after a heading), cuts at the
+ * last grapheme boundary at or before `max`, so no emoji or accented letter
+ * is split and the body is never dropped for an early line break.
  */
 export function capText(text: string, max: number = MAX_EXTRACTED_TEXT_CHARS): CappedText {
   if (text.length <= max) return { text, truncated: false };
 
   const space = Math.max(text.lastIndexOf(" ", max), text.lastIndexOf("\n", max));
-  if (space > 0) return { text: text.slice(0, space).trimEnd(), truncated: true };
+  if (space > 0 && space >= max - WORD_BREAK_WINDOW) {
+    return { text: text.slice(0, space).trimEnd(), truncated: true };
+  }
 
-  // No whitespace: walk graphemes (lazily) up to the cap.
+  // No whitespace near the cap: walk graphemes (lazily) up to the cap.
   let end = 0;
   for (const { index, segment } of graphemes.segment(text)) {
     if (index + segment.length > max) break;
