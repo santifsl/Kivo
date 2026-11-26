@@ -6,27 +6,26 @@ import { Button } from "../ui/button";
 import { ErrorState } from "../ui/error-state";
 import { GlassPanel } from "../ui/glass-panel";
 import { LoadingState } from "../ui/loading-state";
+import { useClerkAppearance } from "./clerk-appearance";
 
-const appearance = {
-  variables: {
-    colorPrimary: "var(--accent)",
-    colorForeground: "var(--ink)",
-    borderRadius: "var(--radius-md)",
-  },
-};
 const loadingPlans = <LoadingState label="Loading subscription plans…" rows={2} />;
 
 export function BillingPlans() {
+  const appearance = useClerkAppearance();
   return (
     <GlassPanel as="section" aria-label="Subscription plans" className="min-w-0 p-4 sm:p-6">
       <ClerkLoading>{loadingPlans}</ClerkLoading>
       <ClerkLoaded>
-        <PricingTable
-          for="user"
-          appearance={appearance}
-          checkoutProps={{ appearance }}
-          fallback={loadingPlans}
-        />
+        {appearance ? (
+          <PricingTable
+            for="user"
+            appearance={appearance}
+            checkoutProps={{ appearance }}
+            fallback={loadingPlans}
+          />
+        ) : (
+          loadingPlans
+        )}
       </ClerkLoaded>
       <ClerkFailed>
         <ErrorState
@@ -39,6 +38,7 @@ export function BillingPlans() {
 }
 
 export function ManageSubscriptionButton() {
+  const appearance = useClerkAppearance() ?? undefined;
   return (
     <Show when="signed-in">
       <SubscriptionDetailsButton for="user" subscriptionDetailsProps={{ appearance }}>
