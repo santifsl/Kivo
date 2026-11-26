@@ -7,6 +7,8 @@ import { createServer } from "node:http";
 import { setTimeout as delay } from "node:timers/promises";
 import { clerkSetup, setupClerkTestingToken } from "@clerk/testing/playwright";
 import { chromium, type BrowserContext, type Page } from "playwright";
+import type { ListProjectsResponse } from "../packages/shared/src/api/projects.ts";
+import type { ApiError } from "../packages/shared/src/errors.ts";
 import type { WidgetConfig } from "../packages/shared/src/widget.ts";
 
 const FREE_CONFIG: WidgetConfig = {
@@ -118,7 +120,7 @@ async function readPlan(page: Page) {
   return page.evaluate(async () => {
     const response = await fetch("/api/projects", { cache: "no-store" });
     if (!response.ok) throw new Error(`Could not read the owner plan (HTTP ${response.status}).`);
-    return ((await response.json()) as { plan: string }).plan;
+    return ((await response.json()) as ListProjectsResponse).plan;
   });
 }
 
@@ -141,7 +143,7 @@ async function attemptFreeSave(page: Page, projectId: string) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(config),
       });
-      return { status: response.status, body: await response.json() };
+      return { status: response.status, body: (await response.json()) as ApiError };
     },
     { id: projectId, config: CUSTOM_CONFIG },
   );
@@ -249,7 +251,31 @@ async function checkInstallation(page: Page, expected: WidgetConfig) {
     edges[horizontal] >= 0 && edges[horizontal] < 40,
     `Expected launcher at the ${horizontal} edge.`,
   );
-  await button.click();
+  // Sample Chromium's generated CSS transitions immediately after opening.
+  // Reading the running transitions proves the first open actually animates.
+  const motion = await button.evaluate((element) => {
+    (element as HTMLButtonElement).click();
+    const frame = (element.getRootNode() as ShadowRoot).querySelector("iframe");
+    if (!frame) throw new Error("Opening the launcher did not create the iframe.");
+    const animations = frame
+      .getAnimations()
+      .filter((animation) => animation instanceof CSSTransition);
+    const opacity = animations.find((animation) => animation.transitionProperty === "opacity");
+    const transform = animations.find((animation) => animation.transitionProperty === "transform");
+    const start = (transform?.effect as KeyframeEffect | undefined)?.getKeyframes()[0]?.transform;
+    return {
+      opacity: (opacity?.effect as KeyframeEffect | undefined)
+        ?.getKeyframes()
+        .map((frame) => frame.opacity),
+      scale: typeof start === "string" ? new DOMMatrix(start).a : 1,
+      slides: typeof start === "string" && new DOMMatrix(start).f !== 0,
+    };
+  });
+  assert.deepEqual(motion.opacity, ["0", "1"], "Expected the panel to fade in.");
+  const expectedScale = expected.animation === "scale" ? 0.9 : 1;
+  assert(Math.abs(motion.scale - expectedScale) < 0.001, "Unexpected starting scale.");
+  assert.equal(motion.slides, expected.animation === "slide");
+
   const panel = host.frameLocator("iframe");
   await panel.getByRole("heading", { name: expected.header_text, exact: true }).waitFor();
   await panel.getByRole("textbox", { name: "Message" }).waitFor();
