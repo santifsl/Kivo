@@ -7,10 +7,10 @@ The last verified application commit on `main` is `ca1ab0bfed21d875d57d15425a1ea
 | Agent | Branch and checkpoint |
 | --- | --- |
 | Michael | `handoff/claude-hq-phase-5-6` holds this document. The local `main` was fast-forwarded to `ca1ab0bfed21d875d57d15425a1ea8bac80c8339` and matched `origin/main`. |
-| Dwight | HQ requested a checkpoint. Workspace branch, HEAD and clean/pushed status are pending while his session is waiting for terminal input. Latest confirmed merged work is PR #52. |
+| Dwight | `p6h-t03-final-security-pass` at `a71a165050d6af9c064bca2c0581efb95ef6660b`. Dwight confirmed a clean tree, zero unpushed commits and no stashes. GitHub `refs/pull/52/head` matches his HEAD. The original remote branch was deleted after squash merge. [PR #52](https://github.com/santifsl/Kivo/pull/52) |
 | Jim | HQ requested a checkpoint. Workspace branch, HEAD and clean/pushed status are pending while his session is waiting for terminal input. Latest confirmed merged work is PR #53. |
 
-GitHub showed zero open PRs and no published Phase 6 smoke-test branch when checked. Recheck open PRs and worker workspace receipts before declaring the handoff complete.
+GitHub showed zero open PRs and no published Phase 6 smoke-test branch when checked. Recheck open PRs and obtain Jim's workspace receipt before declaring the handoff complete. HQ action `aimwx0kuwc13` tracks the terminal input blocker.
 
 ## Phase 5 — Complete
 
