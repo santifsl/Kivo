@@ -157,6 +157,23 @@ describe("POST /api/clerk/webhook", () => {
     expect(trackUpgrade).toHaveBeenCalledExactlyOnceWith(ownerId);
   });
 
+  it.each(["", null])("activates personal Pro with organization_id %j", async (organizationId) => {
+    const { plan } = account();
+    verifyWebhook.mockResolvedValue(
+      webhook("subscriptionItem.active", {
+        payer: { user_id: ownerId, organization_id: organizationId },
+        status: "active",
+      }),
+    );
+    getUserBillingSubscription.mockResolvedValue(subscription(subscriptionItem("active")));
+
+    await deliver();
+
+    expect(getUserBillingSubscription).toHaveBeenCalledExactlyOnceWith(ownerId);
+    expect(plan()).toBe("pro");
+    expect(trackUpgrade).toHaveBeenCalledExactlyOnceWith(ownerId);
+  });
+
   it("initializes a missing account on activation and records the first upgrade", async () => {
     const { plan } = account(null);
     verifyWebhook.mockResolvedValue(webhook("subscriptionItem.active"));
@@ -192,6 +209,7 @@ describe("POST /api/clerk/webhook", () => {
     webhook("subscriptionItem.active", {}, "starter"),
     webhook("subscriptionItem.ended", {}, "free_user"),
     webhook("subscriptionItem.active", { payer: { user_id: ownerId, organization_id: "org_1" } }),
+    webhook("subscriptionItem.active", { payer: { user_id: ownerId, organization_id: false } }),
     webhook("subscriptionItem.active", { payer: { organization_id: "org_1" } }),
     webhook("subscriptionItem.active", { payer: undefined }),
     webhook("subscription.active"),

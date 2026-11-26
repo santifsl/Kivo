@@ -14,7 +14,8 @@ export function personalProOwner({ type, data }: ClerkWebhookEvent): string | un
   const { payer, plan } = data;
   if (!plan || typeof plan !== "object" || !("slug" in plan) || plan.slug !== "pro") return;
   if (!payer || typeof payer !== "object") return;
-  if ("organization_id" in payer && payer.organization_id != null) return;
+  if ("organization_id" in payer && payer.organization_id != null && payer.organization_id !== "")
+    return;
   if ("user_id" in payer && typeof payer.user_id === "string" && payer.user_id) {
     return payer.user_id;
   }
