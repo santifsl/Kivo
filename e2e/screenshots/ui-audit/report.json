@@ -1,0 +1,258 @@
+{
+  "1440:01-landing:overflow": {
+    "scrollWidth": 1440,
+    "clientWidth": 1440,
+    "offenders": []
+  },
+  "1440:02-sign-in:overflow": {
+    "scrollWidth": 1440,
+    "clientWidth": 1440,
+    "offenders": []
+  },
+  "1440:03-sign-up:overflow": {
+    "scrollWidth": 1440,
+    "clientWidth": 1440,
+    "offenders": []
+  },
+  "1440:owner": "user_3Mf3PETKzqUWPpYiyQhAcqhFd6s",
+  "1440:04-projects-empty:overflow": {
+    "scrollWidth": 1440,
+    "clientWidth": 1440,
+    "offenders": []
+  },
+  "1440:billing": {
+    "text": "Free Active Free kivo $0 Always free pro Unlock premium features and advanced capabilities in Kivo. $9 month Only billed monthly Subscribe",
+    "headings": [
+      "Free",
+      "pro"
+    ],
+    "buttons": [
+      "Subscribe"
+    ],
+    "clerkCalls": [
+      "200 GET open-ringtail-3628.clerk.accounts.dev/npm/@clerk/ui@1.46.0/dist/subscriptionDetails_ui_84ab12_1.46.0.js",
+      "200 GET open-ringtail-3628.clerk.accounts.dev/v1/billing/plans?payer_type=user&limit=50&offset=0&__clerk_api_version=2026-11-18&_clerk_js_vers",
+      "200 GET open-ringtail-3628.clerk.accounts.dev/v1/me/billing/subscription?__clerk_api_version=2026-11-18&_clerk_js_version=6.48.0&_clerk_session_id=sess_",
+      "200 GET open-ringtail-3628.clerk.accounts.dev/v1/me/billing/payment_methods?limit=10&offset=0&__clerk_api_version=2026-11-18&_clerk_js_version=6.48.0&_cler"
+    ],
+    "console": [
+      "[/dashboard/billing] warning: Clerk: Clerk has been loaded with development keys. Development instances have strict usage limits and should not be used when deploying your application to production. Learn more: https://clerk.com/docs/deployments/overview",
+      "[/dashboard/billing] warning: [PostHog.js] Events are being dropped because the user agent looks like a bot. Set `opt_out_useragent_filter: true` to capture them, e.g. in end-to-end tests. Note that logs from `captureLog` are not subject to this filter."
+    ]
+  },
+  "1440:05-billing-free:overflow": {
+    "scrollWidth": 1440,
+    "clientWidth": 1440,
+    "offenders": []
+  },
+  "1440:project": "a750fa1d-bd84-4f5b-9617-6c351c4f9e99",
+  "1440:06-knowledge-empty:overflow": {
+    "scrollWidth": 1440,
+    "clientWidth": 1440,
+    "offenders": []
+  },
+  "1440:07-knowledge-ready:overflow": {
+    "scrollWidth": 1440,
+    "clientWidth": 1440,
+    "offenders": []
+  },
+  "1440:08-install:overflow": {
+    "scrollWidth": 1440,
+    "clientWidth": 1440,
+    "offenders": []
+  },
+  "1440:09-conversations-empty:overflow": {
+    "scrollWidth": 1440,
+    "clientWidth": 1440,
+    "offenders": []
+  },
+  "1440:11-conversations-list:overflow": {
+    "scrollWidth": 1440,
+    "clientWidth": 1440,
+    "offenders": []
+  },
+  "1440:12-conversation-thread:overflow": {
+    "scrollWidth": 1440,
+    "clientWidth": 1440,
+    "offenders": []
+  },
+  "1440:13-customize-free-locked:overflow": {
+    "scrollWidth": 1440,
+    "clientWidth": 1440,
+    "offenders": []
+  },
+  "1440:14-projects-one:overflow": {
+    "scrollWidth": 1440,
+    "clientWidth": 1440,
+    "offenders": []
+  },
+  "1440:console": [
+    "[/] warning: [PostHog.js] Events are being dropped because the user agent looks like a bot. Set `opt_out_useragent_filter: true` to capture them, e.g. in end-to-end tests. Note that logs from `captureLog` are not subject to this filter.",
+    "[/sign-in] warning: Clerk: Clerk has been loaded with development keys. Development instances have strict usage limits and should not be used when deploying your application to production. Learn more: https://clerk.com/docs/deployments/overview",
+    "[/sign-in] warning: [PostHog.js] Events are being dropped because the user agent looks like a bot. Set `opt_out_useragent_filter: true` to capture them, e.g. in end-to-end tests. Note that logs from `captureLog` are not subject to this filter.",
+    "[/sign-in] error: Access to fetch at 'https://1-m223rtpkack2zti2unvscopvxy-bndvwhzwar3lxw7p343kyta5jy-p.client.protect.clerk.com/ins_3Lsh5AaSCqUsHoPUEw5Fee1jfmk/probe' from origin 'https://kivo-git-p3k-t13-cap-extracted-text-santifsl.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header",
+    "requestfailed https://1-m223rtpkack2zti2unvscopvxy-bndvwhzwar3lxw7p343kyta5jy-p.client.protect.clerk.com/ins_3Lsh5AaSCqUsHoPUEw5Fee1jfmk/probe net::ERR_FAILED",
+    "[/sign-in] error: Failed to load resource: net::ERR_FAILED",
+    "[/sign-in] error: Access to fetch at 'https://1-m223rtpkack2zti2unvscopvxy-bndvwhzwar3lxw7p343kyta5jy-p.client.protect.clerk.com/ins_3Lsh5AaSCqUsHoPUEw5Fee1jfmk/probe' from origin 'https://kivo-git-p3k-t13-cap-extracted-text-santifsl.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header",
+    "requestfailed https://1-m223rtpkack2zti2unvscopvxy-bndvwhzwar3lxw7p343kyta5jy-p.client.protect.clerk.com/ins_3Lsh5AaSCqUsHoPUEw5Fee1jfmk/probe net::ERR_FAILED",
+    "[/sign-in] error: Failed to load resource: net::ERR_FAILED",
+    "[/sign-in] error: Access to fetch at 'https://1-m223rtpkack2zti2unvscopvxy-bndvwhzwar3lxw7p343kyta5jy-p.client.protect.clerk.com/ins_3Lsh5AaSCqUsHoPUEw5Fee1jfmk/probe' from origin 'https://kivo-git-p3k-t13-cap-extracted-text-santifsl.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header",
+    "requestfailed https://1-m223rtpkack2zti2unvscopvxy-bndvwhzwar3lxw7p343kyta5jy-p.client.protect.clerk.com/ins_3Lsh5AaSCqUsHoPUEw5Fee1jfmk/probe net::ERR_FAILED",
+    "[/sign-in] error: Failed to load resource: net::ERR_FAILED",
+    "[/sign-in] error: Access to fetch at 'https://1-m223rtpkack2zti2unvscopvxy-bndvwhzwar3lxw7p343kyta5jy-p.client.protect.clerk.com/ins_3Lsh5AaSCqUsHoPUEw5Fee1jfmk/probe' from origin 'https://kivo-git-p3k-t13-cap-extracted-text-santifsl.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header",
+    "requestfailed https://1-m223rtpkack2zti2unvscopvxy-bndvwhzwar3lxw7p343kyta5jy-p.client.protect.clerk.com/ins_3Lsh5AaSCqUsHoPUEw5Fee1jfmk/probe net::ERR_FAILED",
+    "[/sign-in] error: Failed to load resource: net::ERR_FAILED",
+    "[/sign-in] error: Access to fetch at 'https://1-m223rtpkack2zti2unvscopvxy-bndvwhzwar3lxw7p343kyta5jy-p.client.protect.clerk.com/ins_3Lsh5AaSCqUsHoPUEw5Fee1jfmk/probe' from origin 'https://kivo-git-p3k-t13-cap-extracted-text-santifsl.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header",
+    "requestfailed https://1-m223rtpkack2zti2unvscopvxy-bndvwhzwar3lxw7p343kyta5jy-p.client.protect.clerk.com/ins_3Lsh5AaSCqUsHoPUEw5Fee1jfmk/probe net::ERR_FAILED",
+    "[/sign-in] error: Failed to load resource: net::ERR_FAILED",
+    "[/sign-in] error: Failed to load resource: the server responded with a status of 403 (Forbidden)",
+    "[/sign-in] error: Failed to load resource: the server responded with a status of 403 (Forbidden)",
+    "[/sign-in] error: Failed to load resource: the server responded with a status of 403 (Forbidden)",
+    "[/sign-in] error: Failed to load resource: the server responded with a status of 403 (Forbidden)",
+    "[/sign-in] warning: No available adapters.",
+    "[/sign-in] error: Access to fetch at 'https://1-m223rtpkack2zti2unvscopvxy-bndvwhzwar3lxw7p343kyta5jy-p.client.protect.clerk.com/ins_3Lsh5AaSCqUsHoPUEw5Fee1jfmk/c/1-m223rtpkack2zti2unvscopvxy-bndvwhzwar3lxw7p343kyta5jy/probe' from origin 'https://kivo-git-p3k-t13-cap-extracted-text-santifsl.vercel.app' has been block",
+    "requestfailed https://1-m223rtpkack2zti2unvscopvxy-bndvwhzwar3lxw7p343kyta5jy-p.client.protect.clerk.com/ins_3Lsh5AaSCqUsHoPUEw5Fee1jfmk/c/1-m223rtpkack2zti2unvscop net::ERR_FAILED",
+    "[/sign-in] error: Failed to load resource: net::ERR_FAILED",
+    "[/sign-up] warning: Clerk: Clerk has been loaded with development keys. Development instances have strict usage limits and should not be used when deploying your application to production. Learn more: https://clerk.com/docs/deployments/overview",
+    "[/sign-up] warning: [PostHog.js] Events are being dropped because the user agent looks like a bot. Set `opt_out_useragent_filter: true` to capture them, e.g. in end-to-end tests. Note that logs from `captureLog` are not subject to this filter.",
+    "[/] warning: [PostHog.js] Events are being dropped because the user agent looks like a bot. Set `opt_out_useragent_filter: true` to capture them, e.g. in end-to-end tests. Note that logs from `captureLog` are not subject to this filter.",
+    "[/sign-up] warning: Clerk: Clerk has been loaded with development keys. Development instances have strict usage limits and should not be used when deploying your application to production. Learn more: https://clerk.com/docs/deployments/overview",
+    "[/dashboard/billing] warning: Clerk: Clerk has been loaded with development keys. Development instances have strict usage limits and should not be used when deploying your application to production. Learn more: https://clerk.com/docs/deployments/overview",
+    "[/dashboard/billing] warning: [PostHog.js] Events are being dropped because the user agent looks like a bot. Set `opt_out_useragent_filter: true` to capture them, e.g. in end-to-end tests. Note that logs from `captureLog` are not subject to this filter.",
+    "[/dashboard] warning: Clerk: Clerk has been loaded with development keys. Development instances have strict usage limits and should not be used when deploying your application to production. Learn more: https://clerk.com/docs/deployments/overview",
+    "[/dashboard] warning: [PostHog.js] Events are being dropped because the user agent looks like a bot. Set `opt_out_useragent_filter: true` to capture them, e.g. in end-to-end tests. Note that logs from `captureLog` are not subject to this filter.",
+    "[/dashboard/projects/a750fa1d-bd84-4f5b-9617-6c351c4f9e99/knowledge] warning: Clerk: Clerk has been loaded with development keys. Development instances have strict usage limits and should not be used when deploying your application to production. Learn more: https://clerk.com/docs/deployments/overview",
+    "[/dashboard/projects/a750fa1d-bd84-4f5b-9617-6c351c4f9e99/knowledge] warning: [PostHog.js] Events are being dropped because the user agent looks like a bot. Set `opt_out_useragent_filter: true` to capture them, e.g. in end-to-end tests. Note that logs from `captureLog` are not subject to this filter.",
+    "[/dashboard] warning: Clerk: Clerk has been loaded with development keys. Development instances have strict usage limits and should not be used when deploying your application to production. Learn more: https://clerk.com/docs/deployments/overview",
+    "[/dashboard] warning: [PostHog.js] Events are being dropped because the user agent looks like a bot. Set `opt_out_useragent_filter: true` to capture them, e.g. in end-to-end tests. Note that logs from `captureLog` are not subject to this filter."
+  ],
+  "1440:deletedClerk": "user_3Mf3PETKzqUWPpYiyQhAcqhFd6s",
+  "375:01-landing:overflow": {
+    "scrollWidth": 375,
+    "clientWidth": 375,
+    "offenders": []
+  },
+  "375:02-sign-in:overflow": {
+    "scrollWidth": 375,
+    "clientWidth": 375,
+    "offenders": []
+  },
+  "375:03-sign-up:overflow": {
+    "scrollWidth": 375,
+    "clientWidth": 375,
+    "offenders": []
+  },
+  "375:owner": "user_3Mf3Y1ucpeeF00qLXCrgRTlipka",
+  "375:04-projects-empty:overflow": {
+    "scrollWidth": 375,
+    "clientWidth": 375,
+    "offenders": []
+  },
+  "375:billing": {
+    "text": "Free Active Free kivo $0 Always free pro Unlock premium features and advanced capabilities in Kivo. $9 month Only billed monthly Subscribe",
+    "headings": [
+      "Free",
+      "pro"
+    ],
+    "buttons": [
+      "Subscribe"
+    ],
+    "clerkCalls": [
+      "200 GET open-ringtail-3628.clerk.accounts.dev/npm/@clerk/ui@1.46.0/dist/subscriptionDetails_ui_84ab12_1.46.0.js",
+      "200 GET open-ringtail-3628.clerk.accounts.dev/v1/me/billing/subscription?__clerk_api_version=2026-11-18&_clerk_js_version=6.48.0&_clerk_session_id=sess_",
+      "200 GET open-ringtail-3628.clerk.accounts.dev/v1/billing/plans?payer_type=user&limit=50&offset=0&__clerk_api_version=2026-11-18&_clerk_js_vers",
+      "200 GET open-ringtail-3628.clerk.accounts.dev/v1/me/billing/payment_methods?limit=10&offset=0&__clerk_api_version=2026-11-18&_clerk_js_version=6.48.0&_cler"
+    ],
+    "console": [
+      "[/dashboard/billing] warning: Clerk: Clerk has been loaded with development keys. Development instances have strict usage limits and should not be used when deploying your application to production. Learn more: https://clerk.com/docs/deployments/overview",
+      "[/dashboard/billing] warning: [PostHog.js] Events are being dropped because the user agent looks like a bot. Set `opt_out_useragent_filter: true` to capture them, e.g. in end-to-end tests. Note that logs from `captureLog` are not subject to this filter."
+    ]
+  },
+  "375:05-billing-free:overflow": {
+    "scrollWidth": 375,
+    "clientWidth": 375,
+    "offenders": []
+  },
+  "375:project": "dbea4245-231d-40e4-8b7a-0b47457a7e93",
+  "375:06-knowledge-empty:overflow": {
+    "scrollWidth": 375,
+    "clientWidth": 375,
+    "offenders": []
+  },
+  "375:07-knowledge-ready:overflow": {
+    "scrollWidth": 375,
+    "clientWidth": 375,
+    "offenders": []
+  },
+  "375:08-install:overflow": {
+    "scrollWidth": 375,
+    "clientWidth": 375,
+    "offenders": []
+  },
+  "375:09-conversations-empty:overflow": {
+    "scrollWidth": 375,
+    "clientWidth": 375,
+    "offenders": []
+  },
+  "375:11-conversations-list:overflow": {
+    "scrollWidth": 375,
+    "clientWidth": 375,
+    "offenders": []
+  },
+  "375:12-conversation-thread:overflow": {
+    "scrollWidth": 375,
+    "clientWidth": 375,
+    "offenders": []
+  },
+  "375:13-customize-free-locked:overflow": {
+    "scrollWidth": 375,
+    "clientWidth": 375,
+    "offenders": []
+  },
+  "375:14-projects-one:overflow": {
+    "scrollWidth": 375,
+    "clientWidth": 375,
+    "offenders": []
+  },
+  "375:console": [
+    "[/] warning: [PostHog.js] Events are being dropped because the user agent looks like a bot. Set `opt_out_useragent_filter: true` to capture them, e.g. in end-to-end tests. Note that logs from `captureLog` are not subject to this filter.",
+    "[/sign-in] warning: Clerk: Clerk has been loaded with development keys. Development instances have strict usage limits and should not be used when deploying your application to production. Learn more: https://clerk.com/docs/deployments/overview",
+    "[/sign-in] warning: [PostHog.js] Events are being dropped because the user agent looks like a bot. Set `opt_out_useragent_filter: true` to capture them, e.g. in end-to-end tests. Note that logs from `captureLog` are not subject to this filter.",
+    "[/sign-in] error: Access to fetch at 'https://1-r2jeznszzzgqbymt5mx5txcg34-yizu2olsxetplt2qrdbu6ezqry-p.client.protect.clerk.com/ins_3Lsh5AaSCqUsHoPUEw5Fee1jfmk/probe' from origin 'https://kivo-git-p3k-t13-cap-extracted-text-santifsl.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header",
+    "requestfailed https://1-r2jeznszzzgqbymt5mx5txcg34-yizu2olsxetplt2qrdbu6ezqry-p.client.protect.clerk.com/ins_3Lsh5AaSCqUsHoPUEw5Fee1jfmk/probe net::ERR_FAILED",
+    "[/sign-in] error: Failed to load resource: net::ERR_FAILED",
+    "[/sign-in] error: Access to fetch at 'https://1-r2jeznszzzgqbymt5mx5txcg34-yizu2olsxetplt2qrdbu6ezqry-p.client.protect.clerk.com/ins_3Lsh5AaSCqUsHoPUEw5Fee1jfmk/probe' from origin 'https://kivo-git-p3k-t13-cap-extracted-text-santifsl.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header",
+    "requestfailed https://1-r2jeznszzzgqbymt5mx5txcg34-yizu2olsxetplt2qrdbu6ezqry-p.client.protect.clerk.com/ins_3Lsh5AaSCqUsHoPUEw5Fee1jfmk/probe net::ERR_FAILED",
+    "[/sign-in] error: Failed to load resource: net::ERR_FAILED",
+    "[/sign-in] error: Access to fetch at 'https://1-r2jeznszzzgqbymt5mx5txcg34-yizu2olsxetplt2qrdbu6ezqry-p.client.protect.clerk.com/ins_3Lsh5AaSCqUsHoPUEw5Fee1jfmk/probe' from origin 'https://kivo-git-p3k-t13-cap-extracted-text-santifsl.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header",
+    "requestfailed https://1-r2jeznszzzgqbymt5mx5txcg34-yizu2olsxetplt2qrdbu6ezqry-p.client.protect.clerk.com/ins_3Lsh5AaSCqUsHoPUEw5Fee1jfmk/probe net::ERR_FAILED",
+    "[/sign-in] error: Failed to load resource: net::ERR_FAILED",
+    "[/sign-in] error: Access to fetch at 'https://1-r2jeznszzzgqbymt5mx5txcg34-yizu2olsxetplt2qrdbu6ezqry-p.client.protect.clerk.com/ins_3Lsh5AaSCqUsHoPUEw5Fee1jfmk/probe' from origin 'https://kivo-git-p3k-t13-cap-extracted-text-santifsl.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header",
+    "requestfailed https://1-r2jeznszzzgqbymt5mx5txcg34-yizu2olsxetplt2qrdbu6ezqry-p.client.protect.clerk.com/ins_3Lsh5AaSCqUsHoPUEw5Fee1jfmk/probe net::ERR_FAILED",
+    "[/sign-in] error: Failed to load resource: net::ERR_FAILED",
+    "[/sign-in] error: Access to fetch at 'https://1-r2jeznszzzgqbymt5mx5txcg34-yizu2olsxetplt2qrdbu6ezqry-p.client.protect.clerk.com/ins_3Lsh5AaSCqUsHoPUEw5Fee1jfmk/probe' from origin 'https://kivo-git-p3k-t13-cap-extracted-text-santifsl.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header",
+    "requestfailed https://1-r2jeznszzzgqbymt5mx5txcg34-yizu2olsxetplt2qrdbu6ezqry-p.client.protect.clerk.com/ins_3Lsh5AaSCqUsHoPUEw5Fee1jfmk/probe net::ERR_FAILED",
+    "[/sign-in] error: Failed to load resource: net::ERR_FAILED",
+    "[/sign-in] error: Failed to load resource: the server responded with a status of 403 (Forbidden)",
+    "[/sign-in] error: Failed to load resource: the server responded with a status of 403 (Forbidden)",
+    "[/sign-in] error: Failed to load resource: the server responded with a status of 403 (Forbidden)",
+    "[/sign-in] error: Failed to load resource: the server responded with a status of 403 (Forbidden)",
+    "[/sign-in] warning: No available adapters.",
+    "[/sign-in] error: Access to fetch at 'https://1-r2jeznszzzgqbymt5mx5txcg34-yizu2olsxetplt2qrdbu6ezqry-p.client.protect.clerk.com/ins_3Lsh5AaSCqUsHoPUEw5Fee1jfmk/c/1-r2jeznszzzgqbymt5mx5txcg34-yizu2olsxetplt2qrdbu6ezqry/probe' from origin 'https://kivo-git-p3k-t13-cap-extracted-text-santifsl.vercel.app' has been block",
+    "requestfailed https://1-r2jeznszzzgqbymt5mx5txcg34-yizu2olsxetplt2qrdbu6ezqry-p.client.protect.clerk.com/ins_3Lsh5AaSCqUsHoPUEw5Fee1jfmk/c/1-r2jeznszzzgqbymt5mx5txc net::ERR_FAILED",
+    "[/sign-in] error: Failed to load resource: net::ERR_FAILED",
+    "[/sign-up] warning: Clerk: Clerk has been loaded with development keys. Development instances have strict usage limits and should not be used when deploying your application to production. Learn more: https://clerk.com/docs/deployments/overview",
+    "[/sign-up] warning: [PostHog.js] Events are being dropped because the user agent looks like a bot. Set `opt_out_useragent_filter: true` to capture them, e.g. in end-to-end tests. Note that logs from `captureLog` are not subject to this filter.",
+    "[/] warning: [PostHog.js] Events are being dropped because the user agent looks like a bot. Set `opt_out_useragent_filter: true` to capture them, e.g. in end-to-end tests. Note that logs from `captureLog` are not subject to this filter.",
+    "[/sign-up] warning: Clerk: Clerk has been loaded with development keys. Development instances have strict usage limits and should not be used when deploying your application to production. Learn more: https://clerk.com/docs/deployments/overview",
+    "[/dashboard/billing] warning: Clerk: Clerk has been loaded with development keys. Development instances have strict usage limits and should not be used when deploying your application to production. Learn more: https://clerk.com/docs/deployments/overview",
+    "[/dashboard/billing] warning: [PostHog.js] Events are being dropped because the user agent looks like a bot. Set `opt_out_useragent_filter: true` to capture them, e.g. in end-to-end tests. Note that logs from `captureLog` are not subject to this filter.",
+    "[/dashboard] warning: Clerk: Clerk has been loaded with development keys. Development instances have strict usage limits and should not be used when deploying your application to production. Learn more: https://clerk.com/docs/deployments/overview",
+    "[/dashboard] warning: [PostHog.js] Events are being dropped because the user agent looks like a bot. Set `opt_out_useragent_filter: true` to capture them, e.g. in end-to-end tests. Note that logs from `captureLog` are not subject to this filter.",
+    "[/dashboard/projects/dbea4245-231d-40e4-8b7a-0b47457a7e93/knowledge] warning: Clerk: Clerk has been loaded with development keys. Development instances have strict usage limits and should not be used when deploying your application to production. Learn more: https://clerk.com/docs/deployments/overview",
+    "[/dashboard/projects/dbea4245-231d-40e4-8b7a-0b47457a7e93/knowledge] warning: [PostHog.js] Events are being dropped because the user agent looks like a bot. Set `opt_out_useragent_filter: true` to capture them, e.g. in end-to-end tests. Note that logs from `captureLog` are not subject to this filter.",
+    "[/dashboard] warning: Clerk: Clerk has been loaded with development keys. Development instances have strict usage limits and should not be used when deploying your application to production. Learn more: https://clerk.com/docs/deployments/overview",
+    "[/dashboard] warning: [PostHog.js] Events are being dropped because the user agent looks like a bot. Set `opt_out_useragent_filter: true` to capture them, e.g. in end-to-end tests. Note that logs from `captureLog` are not subject to this filter."
+  ],
+  "375:deletedClerk": "user_3Mf3Y1ucpeeF00qLXCrgRTlipka"
+}
