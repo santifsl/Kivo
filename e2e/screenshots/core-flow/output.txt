@@ -1,0 +1,45 @@
+Core flow against https://kivo-git-p6h-t06-same-origin-preview-widget-santifsl.vercel.app (Preview)
+Started 2026-11-26T20:34:32.961Z
+[2026-11-26T20:34:33.305Z] Step 1: Landing shows the app's own widget
+    screenshot: 01-landing-shows-the-app-s-own-widget.png
+    ✓ passed in 4503 ms
+[2026-11-26T20:34:37.808Z] Step 2: Landing widget answers a product question
+    screenshot: 02-landing-widget-answers-a-product-question.png
+    ✓ passed in 4953 ms: "How do I install Kivo on my website?" → "Sign in to Kivo, create a project, and add your information in the Knowledge section. Once it finishes processing, open the Install tab, copy the JavaScript sni"
+[2026-11-26T20:34:42.761Z] Step 3: Sign up, create a project, upload the PDF
+    screenshot: 03-sign-up-create-a-project-upload-the-pdf.png
+    ✓ passed in 17578 ms: owner user_3MeyNHwU9ciPbAdCbWnsv8Zolms, project 534b3776-6059-42ec-a415-44f250cd04e0, sample.pdf Ready
+[2026-11-26T20:35:00.339Z] Step 4: Install snippet shows the widget on another origin
+    screenshot: 04-install-snippet-shows-the-widget-on-another-origin.png
+    ✓ passed in 4153 ms: served on http://127.0.0.1:35409 with the Free defaults
+[2026-11-26T20:35:04.492Z] Step 5: Widget answers from the PDF
+    screenshot: 05-widget-answers-from-the-pdf.png
+    ✓ passed in 2314 ms: "How long does it take to process refunds?" → "Refunds are processed within 5 business days."
+[2026-11-26T20:35:06.806Z] Step 6: Conversations shows the chat
+    screenshot: 06-conversations-shows-the-chat.png
+    ✓ passed in 3456 ms: conversation 568309bd-4a36-4231-99b5-4ced55866b92
+[2026-11-26T20:35:10.262Z] Step 7: Customize shows the paywall
+    screenshot: 07-customize-shows-the-paywall.png
+    ✓ passed in 2582 ms: controls locked, server save refused with HTTP 402
+[2026-11-26T20:35:12.844Z] Step 8: Upgrade with the test card unlocks Customize
+    screenshot: 08-upgrade-with-the-test-card-unlocks-customize.png
+    ✓ passed in 16998 ms: test payment accepted, plan is Pro, Customize unlocked
+[2026-11-26T20:35:29.842Z] Step 9: New button color shows on the reloaded page
+    screenshot: 09-new-button-color-shows-on-the-reloaded-page.png
+    ✓ passed in 3864 ms: button is #2468ac after reload
+[2026-11-26T20:35:33.706Z] Cleanup
+    project 534b3776-6059-42ec-a415-44f250cd04e0 deleted through the app (HTTP 200)
+    Clerk user user_3MeyNHwU9ciPbAdCbWnsv8Zolms deleted
+    Supabase account deleted; verified 0 accounts, 0 projects, 0 files left (swept 0 project(s), 0 file(s))
+
+  passed  1. Landing shows the app's own widget
+  passed  2. Landing widget answers a product question
+  passed  3. Sign up, create a project, upload the PDF
+  passed  4. Install snippet shows the widget on another origin
+  passed  5. Widget answers from the PDF
+  passed  6. Conversations shows the chat
+  passed  7. Customize shows the paywall
+  passed  8. Upgrade with the test card unlocks Customize
+  passed  9. New button color shows on the reloaded page
+9 passed, 0 skipped, 0 not passed
+Finished 2026-11-26T20:35:35.941Z. Output: /Users/santiagofernandez/.jsmhq/askwell/jim/e2e/output/core-2026-11-26T20-34-32-961Z/
