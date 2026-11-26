@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { connection } from "next/server";
 import { APP_NAME } from "@kivo/shared";
-import { DemoChat } from "../components/landing/demo-chat";
 import { Footer } from "../components/landing/footer";
 import { Hero } from "../components/landing/hero";
 import { HowItWorks } from "../components/landing/how-it-works";
 import { InstallSnippet } from "../components/landing/install-snippet";
+import { LiveDemo } from "../components/landing/live-demo";
 import { Pricing } from "../components/landing/pricing";
 import { RevealFallback } from "../components/landing/reveal";
 import { SIGN_IN_PATH } from "../lib/auth/routes";
@@ -15,7 +16,10 @@ export const metadata: Metadata = {
   description: `${APP_NAME} adds an AI support chat to your website that answers visitors from your own docs. Paste one script tag. Free to start.`,
 };
 
-export default function Home() {
+export default async function Home() {
+  await connection();
+  const widgetKey = process.env.LANDING_WIDGET_KEY?.trim();
+
   return (
     <div className="theme-dark bg-glow min-h-dvh overflow-x-clip text-ink">
       <RevealFallback />
@@ -32,7 +36,7 @@ export default function Home() {
         <main className="flex flex-col gap-28">
           <Hero />
           <HowItWorks />
-          <DemoChat />
+          {widgetKey ? <LiveDemo widgetKey={widgetKey} /> : null}
           <Pricing />
           <InstallSnippet />
         </main>
