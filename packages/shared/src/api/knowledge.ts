@@ -85,6 +85,8 @@ export type FinalizeUploadRequest = z.infer<typeof finalizeUploadRequestSchema>;
 /** POST /api/projects/:id/knowledge/finalize — response. */
 export interface FinalizeUploadResponse {
   source: KnowledgeSource;
+  /** Only the first `MAX_EXTRACTED_TEXT_CHARS` characters of the file's text are used. */
+  truncated: boolean;
 }
 
 /** DELETE /api/knowledge/:id — params: `idParamsSchema`; response. Deletes the file and chunks too. */

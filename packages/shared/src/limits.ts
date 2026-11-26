@@ -8,6 +8,12 @@ export const MAX_MESSAGE_LENGTH = 1000;
 /** Max characters in one pasted text knowledge source. */
 export const MAX_TEXT_SOURCE_LENGTH = 50_000;
 
+/**
+ * Max characters of text used from one uploaded file, after extraction and
+ * normalization. The rest is dropped (finalize says so with `truncated`).
+ */
+export const MAX_EXTRACTED_TEXT_CHARS = 200_000;
+
 /** Max size of one uploaded knowledge file, in bytes (10 MB). */
 export const MAX_FILE_BYTES = 10 * 1024 * 1024;
 

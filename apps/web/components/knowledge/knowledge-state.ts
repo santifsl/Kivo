@@ -19,6 +19,8 @@ export interface KnowledgeState {
   pasteError: string | null;
   upload: UploadProgress;
   uploadError: string | null;
+  /** The last upload's text was cut to `MAX_EXTRACTED_TEXT_CHARS`. */
+  uploadTruncated: boolean;
   /** The server answered 403 plan_limit to the last add. */
   limitFromServer: boolean;
   /** An API call is running. */
@@ -38,7 +40,7 @@ export type KnowledgeAction =
   | { type: "uploadStarted"; fileName: string }
   | { type: "uploadProgressed"; progress: number }
   | { type: "uploadFinalizing" }
-  | { type: "uploadSucceeded"; source: KnowledgeSource }
+  | { type: "uploadSucceeded"; source: KnowledgeSource; truncated: boolean }
   | { type: "uploadFailed"; error: ApiFailure; reservedSource?: KnowledgeSource }
   | { type: "deleteOpened"; source: KnowledgeSource }
   | { type: "deleteClosed" }
@@ -55,6 +57,7 @@ export function initialKnowledgeState(sources: KnowledgeSource[], plan: Plan): K
     pasteError: null,
     upload: { phase: "idle" },
     uploadError: null,
+    uploadTruncated: false,
     limitFromServer: false,
     pending: null,
     deleting: null,
@@ -101,12 +104,13 @@ export function knowledgeReducer(state: KnowledgeState, action: KnowledgeAction)
       return { ...state, pending: null, pasteError: action.error.message };
 
     case "fileRejected":
-      return { ...state, uploadError: action.message };
+      return { ...state, uploadError: action.message, uploadTruncated: false };
     case "uploadStarted":
       return {
         ...state,
         pending: "upload",
         uploadError: null,
+        uploadTruncated: false,
         upload: { phase: "uploading", fileName: action.fileName, progress: 0 },
       };
     case "uploadProgressed":
@@ -123,6 +127,7 @@ export function knowledgeReducer(state: KnowledgeState, action: KnowledgeAction)
         ...state,
         pending: null,
         upload: { phase: "idle" },
+        uploadTruncated: action.truncated,
         sources: withSource(state.sources, action.source),
       };
     case "uploadFailed":

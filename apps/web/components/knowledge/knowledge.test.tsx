@@ -7,7 +7,13 @@ import {
   uploadToSignedUrl,
   type UploadXhr,
 } from "./knowledge-api";
-import { checkFile, FAILED_MESSAGE, sourceCountLabel, statusLabel } from "./knowledge-rules";
+import {
+  checkFile,
+  FAILED_MESSAGE,
+  sourceCountLabel,
+  statusLabel,
+  TRUNCATED_MESSAGE,
+} from "./knowledge-rules";
 import { KnowledgeScreen, type KnowledgeHandlers } from "./knowledge-screen";
 import {
   addingDisabled,
@@ -299,7 +305,7 @@ function fakeUploadApi(overrides: Partial<UploadApi> = {}) {
       calls.push(`finalize ${body.sourceId}`);
       return {
         ok: true as const,
-        data: { source: { ...reserved, status: "processing" as const } },
+        data: { source: { ...reserved, status: "processing" as const }, truncated: false },
       };
     }),
     deleteSource: vi.fn(async (id) => {
@@ -346,6 +352,31 @@ describe("upload flow", () => {
     expect(s.sources[0]?.status).toBe("processing");
     expect(s.upload.phase).toBe("idle");
     expect(s.pending).toBeNull();
+  });
+
+  it("no note when finalize says the text wasn't truncated", async () => {
+    const { api } = fakeUploadApi();
+    let s = state([]);
+    await uploadFile(PROJECT, file("notes.md", 10), (a) => (s = knowledgeReducer(s, a)), api);
+    expect(s.uploadTruncated).toBe(false);
+    expect(render(s)).not.toContain('data-testid="upload-truncated"');
+  });
+
+  it("finalize says truncated → the note shows, until the next upload starts", async () => {
+    const { api, reserved } = fakeUploadApi({
+      finalize: async () => ({
+        ok: true as const,
+        data: { source: { ...reserved, status: "processing" as const }, truncated: true },
+      }),
+    });
+    let s = state([]);
+    await uploadFile(PROJECT, file("big.txt", 10), (a) => (s = knowledgeReducer(s, a)), api);
+    expect(TRUNCATED_MESSAGE).toBe("Only the first 200,000 characters of this file were used.");
+    expect(render(s)).toMatch(
+      /role="status" data-testid="upload-truncated"[^>]*>Only the first 200,000 characters of this file were used\.</,
+    );
+    s = knowledgeReducer(s, { type: "uploadStarted", fileName: "next.pdf" });
+    expect(render(s)).not.toContain(TRUNCATED_MESSAGE);
   });
 
   it("shows progress while uploading", () => {

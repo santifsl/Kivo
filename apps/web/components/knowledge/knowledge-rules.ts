@@ -6,6 +6,7 @@ import {
   type KnowledgeFileType,
   type KnowledgeSourceStatus,
   type KnowledgeSourceType,
+  MAX_EXTRACTED_TEXT_CHARS,
   MAX_KNOWLEDGE_FILE_BYTES,
   PLAN_LIMITS,
   type Plan,
@@ -55,6 +56,9 @@ const STATUS_LABELS: Record<KnowledgeSourceStatus, string> = {
 export function statusLabel(status: KnowledgeSourceStatus): string {
   return STATUS_LABELS[status];
 }
+
+/** After an upload whose text was cut to the cap. */
+export const TRUNCATED_MESSAGE = `Only the first ${MAX_EXTRACTED_TEXT_CHARS.toLocaleString("en-US")} characters of this file were used.`;
 
 export const FAILED_MESSAGE = "Couldn't read this file. Delete it and try again.";
 

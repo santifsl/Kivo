@@ -79,7 +79,11 @@ export async function uploadFile(
   const finalized = await api.finalize(projectId, { sourceId: source.id });
   dispatch(
     finalized.ok
-      ? { type: "uploadSucceeded", source: finalized.data.source }
+      ? {
+          type: "uploadSucceeded",
+          source: finalized.data.source,
+          truncated: finalized.data.truncated,
+        }
       : { type: "uploadFailed", error: finalized.error },
   );
 }
