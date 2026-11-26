@@ -38,7 +38,7 @@ export function Dialog({ title, description, onClose, children }: DialogProps) {
       ref={ref}
       aria-labelledby={titleId}
       aria-describedby={description ? descriptionId : undefined}
-      className="m-auto w-[calc(100%-2rem)] max-w-md overflow-visible bg-transparent p-0 backdrop:bg-wash-strong backdrop:backdrop-blur-sm"
+      className="m-auto max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-md overflow-y-auto overscroll-contain bg-transparent p-0 backdrop:bg-wash-strong backdrop:backdrop-blur-sm"
       onCancel={(event) => {
         // The parent decides (it ignores Escape while a request runs).
         event.preventDefault();
