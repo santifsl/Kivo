@@ -1,5 +1,14 @@
+import { mkdtemp, readFile, rm, symlink } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { createSupabasePglite, type SupabasePglite } from "../supabase-pglite";
+import {
+  createSupabasePglite,
+  listMigrations,
+  MIGRATION_ROLE,
+  MIGRATIONS_DIR,
+  type SupabasePglite,
+} from "../supabase-pglite";
 import { TABLES, type OwnerRows, seedOwner, validInsert, vec } from "./fixtures";
 
 let s: SupabasePglite;
@@ -56,6 +65,75 @@ describe("tenant isolation", () => {
   it("an authenticated token without a sub sees nothing", async () => {
     const empty = Object.fromEntries(TABLES.map((t) => [t, []]));
     expect(await visibleKeys(null)).toEqual(empty);
+  });
+});
+
+describe("account billing revision", () => {
+  it("defaults to zero on accounts that already exist when the migration runs", async () => {
+    const migration = "20261126011827_add_account_billing_revision.sql";
+    const migrationsDir = await mkdtemp(join(tmpdir(), "kivo-before-billing-revision-"));
+    try {
+      const earlierFiles = (await listMigrations()).filter((file) => file < migration);
+      await Promise.all(
+        earlierFiles.map((file) => symlink(join(MIGRATIONS_DIR, file), join(migrationsDir, file))),
+      );
+      const before = await createSupabasePglite({ migrationsDir });
+      try {
+        await before.db.query(
+          "insert into public.accounts (clerk_user_id, plan) values ($1, 'pro')",
+          [a.sub],
+        );
+        const sql = await readFile(join(MIGRATIONS_DIR, migration), "utf8");
+        await before.db.transaction(async (tx) => {
+          await tx.exec(`set local role ${MIGRATION_ROLE}`);
+          await tx.exec(sql);
+        });
+        const { rows } = await before.db.query(
+          "select clerk_user_id, plan, billing_revision from public.accounts",
+        );
+        expect(rows).toEqual([{ clerk_user_id: a.sub, plan: "pro", billing_revision: 0 }]);
+      } finally {
+        await before.close();
+      }
+    } finally {
+      await rm(migrationsDir, { recursive: true, force: true });
+    }
+  }, 30_000);
+
+  it("lets an authenticated owner read the existing columns only on their own row", async () => {
+    const { rows } = await s.as("authenticated", a.sub, (tx) =>
+      tx.query("select clerk_user_id, plan, created_at from public.accounts"),
+    );
+    expect(rows).toEqual([{ clerk_user_id: a.sub, plan: "free", created_at: expect.any(Date) }]);
+    await expect(
+      s.as("authenticated", a.sub, (tx) => tx.query("select * from public.accounts")),
+    ).rejects.toMatchObject({ code: "42501" });
+  });
+
+  it.each(["authenticated", "anon"] as const)(
+    "%s cannot read or update the revision",
+    async (role) => {
+      await expect(
+        s.as(role, a.sub, (tx) => tx.query("select billing_revision from public.accounts")),
+      ).rejects.toMatchObject({ code: "42501" });
+      await expect(
+        s.as(role, a.sub, (tx) => tx.query("update public.accounts set billing_revision = 1")),
+      ).rejects.toMatchObject({ code: "42501" });
+    },
+  );
+
+  it("lets the service role advance the revision once", async () => {
+    const update = () =>
+      s.as("service_role", null, (tx) =>
+        tx.query(
+          `update public.accounts set plan = 'pro', billing_revision = 1
+         where clerk_user_id = $1 and billing_revision = 0
+         returning billing_revision`,
+          [a.sub],
+        ),
+      );
+    expect((await update()).rows).toEqual([{ billing_revision: 1 }]);
+    expect((await update()).rows).toEqual([]);
   });
 });
 
