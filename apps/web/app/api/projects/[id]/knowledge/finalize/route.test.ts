@@ -1,5 +1,5 @@
 import { readFile } from "node:fs/promises";
-import { apiErrorSchema, MAX_KNOWLEDGE_FILE_BYTES } from "@kivo/shared";
+import { apiErrorSchema, MAX_EXTRACTED_TEXT_CHARS, MAX_KNOWLEDGE_FILE_BYTES } from "@kivo/shared";
 import type * as NextServer from "next/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fakePostgrest, type RecordedRequest } from "../../../../../../lib/projects/fake-postgrest";
@@ -227,7 +227,10 @@ describe("POST /api/projects/:id/knowledge/finalize", () => {
     const res = await finalize();
     expect(res.status).toBe(200);
     expect(res.headers.get("cache-control")).toBe("no-store");
-    expect(await res.json()).toEqual({ source: { ...row(), status: "processing" } });
+    expect(await res.json()).toEqual({
+      source: { ...row(), status: "processing" },
+      truncated: false,
+    });
 
     // The claim: one UPDATE uploading → processing, scoped to this project, service key.
     const [claim] = pg.to("/rest/v1/knowledge_sources", "PATCH");
@@ -262,6 +265,29 @@ describe("POST /api/projects/:id/knowledge/finalize", () => {
     expect((await finalize()).status).toBe(200);
     await runAfter();
     expect(embedMock.mock.calls[0]?.[0].join(" ")).toContain(text);
+    expect(status).toBe("ready");
+  });
+
+  it("a .txt over 200,000 characters → truncated: true, only the first 200,000 are chunked", async () => {
+    type = "txt";
+    const word = "lorem ipsum ";
+    const text = word.repeat(Math.ceil((MAX_EXTRACTED_TEXT_CHARS * 1.5) / word.length));
+    bucket.set(key(), new TextEncoder().encode(`${text}TAIL_MARKER`));
+
+    const res = await finalize();
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({
+      source: { ...row(), status: "processing" },
+      truncated: true,
+    });
+
+    await runAfter();
+    const embedded = embedMock.mock.calls.flatMap((c) => c[0]);
+    expect(embedded.join(" ")).not.toContain("TAIL_MARKER");
+    // Chunks overlap, so their total is a bit over the cap, never near the 300,000 sent.
+    const total = embedded.reduce((sum, chunk) => sum + chunk.length, 0);
+    expect(total).toBeGreaterThan(MAX_EXTRACTED_TEXT_CHARS * 0.9);
+    expect(total).toBeLessThan(MAX_EXTRACTED_TEXT_CHARS * 1.2);
     expect(status).toBe("ready");
   });
 

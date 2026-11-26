@@ -19,6 +19,7 @@ import {
   sourceCountLabel,
   sourceLimitMessage,
   statusLabel,
+  TRUNCATED_MESSAGE,
   typeLabel,
 } from "./knowledge-rules";
 import { addingDisabled, type KnowledgeState } from "./knowledge-state";
@@ -219,6 +220,11 @@ function UploadForm({
         />
       </label>
       {upload.phase !== "idle" ? <UploadProgressBar upload={upload} /> : null}
+      {state.uploadTruncated ? (
+        <p role="status" data-testid="upload-truncated" className="text-sm text-ink-muted">
+          {TRUNCATED_MESSAGE}
+        </p>
+      ) : null}
       {state.uploadError ? (
         <p role="alert" className="text-sm text-ink">
           {state.uploadError}

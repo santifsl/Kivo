@@ -34,7 +34,8 @@ import { createServiceClient } from "../../../../../../lib/supabase/service";
 //    source, one already finalized (a second call), or one reclaimed after
 //    2 hours all look the same, and nothing is processed twice.
 // 2. Downloads the object and checks the real size and, for PDFs, the
-//    `%PDF-` magic bytes, then extracts the text.
+//    `%PDF-` magic bytes, then extracts the text and caps it at
+//    `MAX_EXTRACTED_TEXT_CHARS` (`truncated` in the response says so).
 // 3. A refused file (too large, wrong bytes, no text): the file and the row
 //    are deleted → 400 `invalid_input`. Not uploaded yet → the claim is
 //    released (back to `uploading`) → 400, so the owner can upload and retry.
@@ -74,8 +75,9 @@ export async function POST(request: Request, context: Context): Promise<Response
     if (source.type === "text" || !key) throw new Error("claimed source is not a file");
 
     let text: string;
+    let truncated: boolean;
     try {
-      text = await readUpload(await downloadObject(service, key), source.type);
+      ({ text, truncated } = await readUpload(await downloadObject(service, key), source.type));
     } catch (err) {
       if (err instanceof UploadRefusedError) {
         // Delete the file, then the row. If Storage fails, the row still goes
@@ -97,7 +99,7 @@ export async function POST(request: Request, context: Context): Promise<Response
       }
     });
 
-    const body: FinalizeUploadResponse = { source };
+    const body: FinalizeUploadResponse = { source, truncated };
     return ownerJson(body);
   } catch (err) {
     return internalError(WHERE, err);
