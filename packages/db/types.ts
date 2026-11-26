@@ -16,16 +16,19 @@ export type Database = {
     Tables: {
       accounts: {
         Row: {
+          billing_revision: number
           clerk_user_id: string
           created_at: string
           plan: string
         }
         Insert: {
+          billing_revision?: number
           clerk_user_id: string
           created_at?: string
           plan?: string
         }
         Update: {
+          billing_revision?: number
           clerk_user_id?: string
           created_at?: string
           plan?: string

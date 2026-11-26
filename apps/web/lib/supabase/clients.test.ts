@@ -50,11 +50,16 @@ function lastRequest(): { url: string; headers: Headers } {
 describe("createOwnerClient", () => {
   it("sends the Clerk session token as the bearer and the publishable key as apikey", async () => {
     getToken.mockResolvedValue("clerk-session-jwt");
-    const { error } = await (await createOwnerClient()).from("accounts").select("*");
+    const { error } = await (
+      await createOwnerClient()
+    )
+      .from("accounts")
+      .select("clerk_user_id, plan, created_at");
     expect(error).toBeNull();
 
     const { url, headers } = lastRequest();
     expect(url.startsWith(`${URL_}/rest/v1/accounts`)).toBe(true);
+    expect(new URL(url).searchParams.get("select")).toBe("clerk_user_id,plan,created_at");
     expect(headers.get("authorization")).toBe("Bearer clerk-session-jwt");
     expect(headers.get("apikey")).toBe(PUBLISHABLE);
   });
