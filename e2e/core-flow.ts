@@ -27,6 +27,7 @@ import {
   PDF_ANSWER,
   PDF_QUESTION,
   allowPreview,
+  appOrigin,
   askWidget,
   attemptFreeSave,
   checkInstallation,
@@ -49,19 +50,7 @@ import {
 const LANDING_QUESTION = `How do I install ${APP_NAME} on my website?`;
 const LANDING_ANSWER = /\b(?:install|script|snippet)\b/i;
 
-function appOrigin(value: string | undefined): string {
-  assert(value, "Usage: pnpm e2e:core <app-url>");
-  const url = new URL(value);
-  assert(
-    url.protocol === "https:" ||
-      (url.protocol === "http:" && ["localhost", "127.0.0.1"].includes(url.hostname)),
-    "Use an https app URL (or a local dev server).",
-  );
-  assert(!url.username && !url.password, "Use a URL without credentials.");
-  return url.origin;
-}
-
-const origin = appOrigin(process.argv[2]);
+const origin = appOrigin(process.argv[2], "Usage: pnpm e2e:core <app-url>");
 const preview = isPreview(origin);
 const clerkSecret = process.env.CLERK_SECRET_KEY ?? "";
 const clerkPublishable = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY ?? "";
@@ -158,20 +147,35 @@ async function supabase(path: string, init: RequestInit = {}) {
   return response.json() as Promise<unknown>;
 }
 
-/** Deletes the account row (cascading to projects and knowledge) and its stored files. */
-async function cleanSupabase(ownerId: string) {
+type StoredFile = { name: string };
+
+async function listFiles(projectId: string) {
+  return (await supabase("/storage/v1/object/list/knowledge", {
+    method: "POST",
+    body: JSON.stringify({ prefix: `${projectId}/`, limit: 100 }),
+  })) as StoredFile[];
+}
+
+/**
+ * Deletes the account row (cascading to projects and knowledge) and every stored file under
+ * the owner's projects. `knownProjectIds` are swept too, since the app may already have
+ * deleted their rows while leaving files behind.
+ */
+async function cleanSupabase(ownerId: string, knownProjectIds: string[]) {
   const owner = encodeURIComponent(ownerId);
-  const projects = (await supabase(
-    `/rest/v1/projects?owner_id=eq.${owner}&select=id,knowledge_sources(storage_key)`,
-  )) as { id: string; knowledge_sources: { storage_key: string | null }[] }[];
-  const keys = projects.flatMap((project) =>
-    project.knowledge_sources.flatMap((source) => source.storage_key ?? []),
-  );
-  if (keys.length > 0) {
+  const rows = (await supabase(`/rest/v1/projects?owner_id=eq.${owner}&select=id`)) as {
+    id: string;
+  }[];
+  const projectIds = [...new Set([...knownProjectIds, ...rows.map((row) => row.id)])];
+  let files = 0;
+  for (const id of projectIds) {
+    const names = (await listFiles(id)).map((file) => `${id}/${file.name}`);
+    if (names.length === 0) continue;
     await supabase("/storage/v1/object/knowledge", {
       method: "DELETE",
-      body: JSON.stringify({ prefixes: keys }),
+      body: JSON.stringify({ prefixes: names }),
     });
+    files += names.length;
   }
   await supabase(`/rest/v1/accounts?clerk_user_id=eq.${owner}`, {
     method: "DELETE",
@@ -188,14 +192,10 @@ async function cleanSupabase(ownerId: string) {
   const left = (await supabase(`/rest/v1/projects?owner_id=eq.${owner}&select=id`)) as unknown[];
   assert.equal(accounts.length, 0, "The Supabase account row is still there.");
   assert.equal(left.length, 0, "Supabase projects are still there.");
-  for (const project of projects) {
-    const files = (await supabase("/storage/v1/object/list/knowledge", {
-      method: "POST",
-      body: JSON.stringify({ prefix: `${project.id}/`, limit: 10 }),
-    })) as unknown[];
-    assert.equal(files.length, 0, `Stored files remain under ${project.id}/.`);
+  for (const id of projectIds) {
+    assert.equal((await listFiles(id)).length, 0, `Stored files remain under ${id}/.`);
   }
-  return { projects: projects.length, files: keys.length };
+  return { projects: projectIds.length, files };
 }
 
 // ---------------------------------------------------------------------------
@@ -389,31 +389,43 @@ async function main(secret: string) {
     } catch (error) {
       log(`    project delete through the app failed: ${String(error)}`);
     }
+    const cleanupErrors: unknown[] = [];
     try {
       if (signUpAttempted) {
         ownerId = (await deleteOwner(email, secret)) ?? ownerId;
         log(`    Clerk user ${ownerId ?? "(never created)"} deleted`);
       }
-      if (ownerId) {
-        if (supabaseUrl && supabaseSecret) {
-          const removed = await cleanSupabase(ownerId);
-          log(
-            `    Supabase account deleted; verified 0 accounts, 0 projects, 0 files left ` +
-              `(swept ${removed.projects} project(s), ${removed.files} file(s))`,
-          );
-        } else {
-          log(
-            "    NEXT_PUBLIC_SUPABASE_URL / SUPABASE_SECRET_KEY not set. Run in the SQL editor:\n" +
-              `    delete from public.accounts where clerk_user_id = '${ownerId}';`,
-          );
-        }
+    } catch (error) {
+      log(`    ✗ Clerk cleanup failed for ${email}: ${String(error)}`);
+      cleanupErrors.push(error);
+    }
+    try {
+      if (ownerId && supabaseUrl && supabaseSecret) {
+        const removed = await cleanSupabase(ownerId, projectId ? [projectId] : []);
+        log(
+          `    Supabase account deleted; verified 0 accounts, 0 projects, 0 files left ` +
+            `(swept ${removed.projects} project folder(s), removed ${removed.files} leftover file(s))`,
+        );
+      } else if (ownerId) {
+        log(
+          "    NEXT_PUBLIC_SUPABASE_URL / SUPABASE_SECRET_KEY not set. Run in the SQL editor:\n" +
+            `    delete from public.accounts where clerk_user_id = '${ownerId}';`,
+        );
       }
     } catch (error) {
-      log(`    ✗ cleanup failed for ${email}: ${String(error)}`);
-      failure ??= error;
-    } finally {
-      site?.close();
-      await browser.close();
+      log(`    ✗ Supabase cleanup failed for ${ownerId}: ${String(error)}`);
+      cleanupErrors.push(error);
+    }
+    site?.close();
+    await browser.close();
+    if (cleanupErrors.length > 0) {
+      const cleanup =
+        cleanupErrors.length === 1
+          ? cleanupErrors[0]
+          : new AggregateError(cleanupErrors, "Clerk and Supabase cleanup both failed.");
+      failure = failure
+        ? new AggregateError([failure, cleanup], "Run and cleanup failed.")
+        : cleanup;
     }
   }
 

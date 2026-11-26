@@ -47,6 +47,19 @@ export function isPreview(origin: string): boolean {
   return url.protocol === "https:" && PREVIEW_HOST.test(url.hostname);
 }
 
+/** The origin of an https app URL (or a local dev server), without credentials. */
+export function appOrigin(value: string | undefined, usage: string): string {
+  assert(value, usage);
+  const url = new URL(value);
+  assert(
+    url.protocol === "https:" ||
+      (url.protocol === "http:" && ["localhost", "127.0.0.1"].includes(url.hostname)),
+    "Use an https app URL (or a local dev server).",
+  );
+  assert(!url.username && !url.password, "Use a URL without credentials.");
+  return url.origin;
+}
+
 /** The origin of a Kivo Preview URL from GitHub, or exits with `usage`. */
 export function previewOrigin(value: string | undefined, usage: string): string {
   assert(value, usage);
