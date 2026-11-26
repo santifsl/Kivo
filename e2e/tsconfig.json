@@ -3,7 +3,8 @@
   "compilerOptions": {
     "lib": ["ES2022", "DOM"],
     "types": ["node"],
-    "erasableSyntaxOnly": true
+    "erasableSyntaxOnly": true,
+    "allowImportingTsExtensions": true
   },
   "include": ["*.ts"]
 }

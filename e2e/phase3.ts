@@ -4,19 +4,22 @@
 
 import assert from "node:assert/strict";
 import { createServer } from "node:http";
-import { fileURLToPath } from "node:url";
 import { clerkSetup, setupClerkTestingToken } from "@clerk/testing/playwright";
 import { chromium, type FrameLocator, type Page } from "playwright";
 import type { ChatRequest, ChatResponse } from "../packages/shared/src/api/widget.ts";
 import type { ApiError } from "../packages/shared/src/errors.ts";
+import {
+  CHAT_PATH,
+  FALLBACK,
+  PDF_ANSWER,
+  PDF_QUESTION as RELATED_QUESTION,
+  createProject,
+  deleteOwner,
+  deleteProjectInDashboard,
+  uploadPdf,
+} from "./helpers.ts";
 
-const PDF = fileURLToPath(
-  new URL("../apps/web/test/fixtures/knowledge/sample.pdf", import.meta.url),
-);
-const RELATED_QUESTION = "How long does it take to process refunds?";
-const FALLBACK = "I don't know the answer to that. Please reach out to the team directly for help.";
 const RATE_LIMIT_MESSAGE = "Too many messages. Please wait a minute before trying again.";
-const CHAT_PATH = "/api/widget/chat";
 const WINDOW_MS = 60_000;
 
 function getAppOrigin(arg: string | undefined): string {
@@ -60,44 +63,6 @@ async function signUp(page: Page, email: string): Promise<void> {
     .first()
     .pressSequentially("424242");
   await page.waitForURL(`${appOrigin}/dashboard**`);
-}
-
-async function createProject(page: Page, name: string): Promise<void> {
-  await page.getByRole("textbox", { name: "New project" }).fill(name);
-  await page.getByRole("button", { name: "Create project" }).click();
-  await page.getByRole("link", { name, exact: true }).click();
-  await page.waitForURL(/\/install$/);
-}
-
-async function uploadPdf(page: Page): Promise<void> {
-  await page.getByRole("link", { name: "Knowledge", exact: true }).click();
-  const [finalized] = await Promise.all([
-    page.waitForResponse((response) => {
-      const url = new URL(response.url());
-      return (
-        url.origin === appOrigin &&
-        url.pathname.endsWith("/knowledge/finalize") &&
-        response.request().method() === "POST"
-      );
-    }),
-    page.getByLabel(/Choose a file/).setInputFiles(PDF),
-  ]);
-  assert.equal(finalized.status(), 200, "Expected HTTP 200 for PDF finalization");
-  const row = page.getByRole("listitem").filter({ hasText: "sample" });
-  const status = row.locator("[data-status]");
-  const deadline = Date.now() + 90_000;
-  while (Date.now() < deadline) {
-    const state = await status.getAttribute("data-status");
-    if (state === "ready") {
-      console.log("PDF finalized with HTTP 200 and reached Ready in Knowledge");
-      return;
-    }
-    assert.notEqual(state, "failed", "PDF ingestion failed");
-    await new Promise((resolve) => setTimeout(resolve, 2_000));
-    const refresh = await page.reload({ waitUntil: "domcontentloaded" });
-    assert(refresh?.ok(), `Knowledge refresh returned HTTP ${refresh?.status()}`);
-  }
-  throw new Error("PDF did not become Ready within 90 seconds");
 }
 
 async function sendFromWidget(page: Page, frame: FrameLocator, message: string) {
@@ -144,7 +109,7 @@ async function checkWidget(page: Page, demoOrigin: string, publicKey: string): P
   // Both widget messages count toward the fresh key's first 20. Send the other
   // 18 from the same iframe/IP in batches to stay inside the minute.
   const started = performance.now();
-  const request = await expectReply(page, frame, RELATED_QUESTION, /\b(?:5|five) business days\b/i);
+  const request = await expectReply(page, frame, RELATED_QUESTION, PDF_ANSWER);
   assert.equal(request.key, publicKey, "The widget must send with this run's project key");
   console.log("External HTML widget answered the PDF question with the five-business-day policy");
   await expectReply(page, frame, "What is the orbital period of Neptune?", FALLBACK);
@@ -187,43 +152,6 @@ async function checkWidget(page: Page, demoOrigin: string, publicKey: string): P
   console.log(
     `Messages 1–20 returned HTTP 200. Message 21 returned HTTP 429 rate_limited after ${elapsed} ms and showed the widget notice.`,
   );
-}
-
-async function deleteProject(page: Page, name: string): Promise<void> {
-  await page.goto(`${appOrigin}/dashboard`);
-  await page.getByRole("textbox", { name: "New project" }).waitFor();
-  const button = page.getByRole("button", { name: `Delete ${name}`, exact: true });
-  if (!(await button.count())) return;
-  await button.click();
-  await page.getByRole("button", { name: "Delete project", exact: true }).click();
-  await page.getByRole("link", { name, exact: true }).waitFor({ state: "detached" });
-  console.log("Deleted fixture project through the dashboard");
-}
-
-async function deleteOwner(email: string, secretKey: string): Promise<void> {
-  const users = new URL("https://api.clerk.com/v1/users");
-  users.searchParams.set("email_address", email);
-  const options = {
-    headers: { Authorization: `Bearer ${secretKey}` },
-    signal: AbortSignal.timeout(15_000),
-  };
-  const response = await fetch(users, options);
-  assert(response.ok, `Clerk fixture lookup returned HTTP ${response.status}`);
-  const matches = (await response.json()) as {
-    id: string;
-    email_addresses: { email_address: string }[];
-  }[];
-  if (matches.length === 0) return;
-  const [owner] = matches;
-  assert(owner && matches.length === 1, "Expected exactly one matching fixture owner");
-  assert(owner.email_addresses.some(({ email_address }) => email_address === email));
-  const deleted = await fetch(`${users.origin}${users.pathname}/${encodeURIComponent(owner.id)}`, {
-    ...options,
-    method: "DELETE",
-    signal: AbortSignal.timeout(15_000),
-  });
-  assert(deleted.ok, `Clerk fixture deletion returned HTTP ${deleted.status}`);
-  console.log("Deleted disposable Clerk owner");
 }
 
 async function main(secretKey: string): Promise<void> {
@@ -273,7 +201,7 @@ async function main(secretKey: string): Promise<void> {
       `${appOrigin}/widget.js`,
       "Install snippet must load this preview's widget.js",
     );
-    await uploadPdf(app);
+    await uploadPdf(app, appOrigin);
 
     server.on("request", (_request, response) => {
       response.writeHead(200, { "content-type": "text/html; charset=utf-8" });
@@ -292,8 +220,13 @@ async function main(secretKey: string): Promise<void> {
     failure = error;
   } finally {
     try {
-      if (app && createAttempted) await deleteProject(app, name);
-      if (signUpAttempted) await deleteOwner(email, secretKey);
+      if (app && createAttempted) {
+        await deleteProjectInDashboard(app, appOrigin, name);
+        console.log("Deleted fixture project through the dashboard");
+      }
+      if (signUpAttempted && (await deleteOwner(email, secretKey))) {
+        console.log("Deleted disposable Clerk owner");
+      }
     } catch (cleanupError) {
       console.error(`Fixture cleanup failed for ${name} (${email}):`, cleanupError);
       failure ??= cleanupError;
