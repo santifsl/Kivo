@@ -1,12 +1,12 @@
 "use client";
 
 import { useClerk } from "@clerk/nextjs";
-import { useEffect, useState } from "react";
+import { Check, Copy } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { captureSnippetCopied } from "../../lib/posthog/browser";
 import { Button } from "../ui/button";
+import { type CopyStatus, createCopyFeedback } from "./copy-feedback";
 import { copyText } from "./install-snippet";
-
-type CopyStatus = "idle" | "copied" | "failed";
 
 const LABELS: Record<CopyStatus, string> = {
   idle: "Copy",
@@ -14,16 +14,21 @@ const LABELS: Record<CopyStatus, string> = {
   failed: "Copy failed",
 };
 
-/** Copies the exact snippet and says so for 2 seconds (also to screen readers). */
+/** Copies the exact snippet and says so for 2 seconds (also to screen readers), then resets. */
 export function SnippetCopyButton({ projectId, text }: { projectId: string; text: string }) {
   const clerk = useClerk();
   const [status, setStatus] = useState<CopyStatus>("idle");
-
+  // One timer per mount, made in the effect so StrictMode's mount/unmount/mount
+  // gets a live one, and disposed on unmount so a late copy can't touch it.
+  const feedback = useRef<ReturnType<typeof createCopyFeedback>>(null);
   useEffect(() => {
-    if (status === "idle") return;
-    const timer = setTimeout(() => setStatus("idle"), 2000);
-    return () => clearTimeout(timer);
-  }, [status]);
+    const current = createCopyFeedback(setStatus);
+    feedback.current = current;
+    return () => {
+      current.dispose();
+      feedback.current = null;
+    };
+  }, []);
 
   async function copy() {
     const ownerId = clerk.user?.id;
@@ -31,19 +36,16 @@ export function SnippetCopyButton({ projectId, text }: { projectId: string; text
       text,
       typeof navigator === "undefined" ? undefined : navigator.clipboard,
     );
-    setStatus(ok ? "copied" : "failed");
+    feedback.current?.show(ok ? "copied" : "failed");
     if (ok && ownerId) {
       void captureSnippetCopied(ownerId, projectId, () => clerk.user?.id === ownerId);
     }
   }
 
+  const Icon = status === "copied" ? Check : Copy;
   return (
-    <Button
-      variant="secondary"
-      onClick={copy}
-      aria-label="Copy install code"
-      className="h-8 px-3 text-xs"
-    >
+    <Button variant="secondary" onClick={copy} aria-label="Copy install code" data-status={status}>
+      <Icon aria-hidden="true" className="size-4" strokeWidth={1.75} />
       <span aria-live="polite">{LABELS[status]}</span>
     </Button>
   );

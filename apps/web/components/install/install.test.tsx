@@ -1,9 +1,10 @@
 import { isValidElement, type ReactElement, type ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { WIDGET_SCRIPT_PATH } from "@kivo/shared/embed";
 import { buildInstallSnippet, copyText, resolveAppOrigin } from "./install-snippet";
-import { INSTALL_STEPS, InstallView } from "./install-view";
+import { COPY_FEEDBACK_MS, type CopyStatus, createCopyFeedback } from "./copy-feedback";
+import { INSTALL_STEPS, InstallView, SNIPPET_CODE_CLASSES, snippetParts } from "./install-view";
 import { SnippetCopyButton } from "./snippet-copy-button";
 
 vi.mock("@clerk/nextjs", () => ({ useClerk: () => ({ user: { id: "user_a" } }) }));
@@ -108,15 +109,111 @@ describe("InstallView", () => {
     const html = renderToStaticMarkup(<InstallView projectId={PROJECT} snippet={snippet} />);
     expect(html).not.toContain("<script");
     expect(html).toContain('class="ph-no-capture" data-testid="install-snippet"');
-    expect(html).toContain(
+    // The visible text is exactly the snippet (what e2e reads and the button copies).
+    const code = /data-testid="install-snippet">([\s\S]*?)<\/code>/.exec(html)?.[1] ?? "";
+    expect(code.replace(/<[^>]+>/g, "")).toBe(
       "&lt;script src=&quot;https://app.example.com/widget.js&quot; data-key=&quot;pk_abcdefgh1234&quot; async&gt;&lt;/script&gt;",
     );
-    expect(INSTALL_STEPS).toEqual([
-      "Copy the code.",
-      "Paste it before </body> on every page.",
-      "Reload the page; the chat button appears in the corner.",
-    ]);
-    expect(html).toContain("Paste it before &lt;/body&gt; on every page.");
+    expect(INSTALL_STEPS).toEqual(["Copy the snippet", "Paste it before </body>", "Reload your site"]);
+    for (const [i, step] of INSTALL_STEPS.entries()) {
+      expect(html).toContain(`Step ${i + 1}: </span>${step.replace("<", "&lt;").replace(">", "&gt;")}`);
+    }
+    expect(html.indexOf("Copy the snippet")).toBeLessThan(html.indexOf("Reload your site"));
     expect(html).toContain('aria-label="Copy install code"');
+  });
+
+  it("never wraps the snippet mid-URL or mid-key: wraps at spaces only, else scrolls inside the card", () => {
+    const html = renderToStaticMarkup(<InstallView projectId={PROJECT} snippet={snippet} />);
+    const pre = /<pre class="([^"]*)"/.exec(html)?.[1]?.split(" ") ?? [];
+    expect(pre).toEqual(expect.arrayContaining(["whitespace-pre-wrap", "break-normal", "overflow-x-auto"]));
+    expect(pre).not.toContain("break-all");
+    expect(pre).not.toContain("break-words");
+    expect(SNIPPET_CODE_CLASSES).not.toMatch(/break-(all|words)|wrap-anywhere|wrap-break-word/);
+    // Each space-separated part (the src URL, the key) is unbreakable; only the spaces between them wrap.
+    expect(snippetParts(snippet)).toEqual([
+      "<script",
+      'src="https://app.example.com/widget.js"',
+      `data-key="${KEY}"`,
+      "async></script>",
+    ]);
+    const spans = [...html.matchAll(/<span class="whitespace-nowrap">([^<]*)<\/span>/g)].map((m) => m[1]);
+    expect(spans).toHaveLength(4);
+    expect(spans[1]).toBe("src=&quot;https://app.example.com/widget.js&quot;");
+    const [src, key] = [/src="([^"]+)"/.exec(snippet)?.[1], /data-key="([^"]+)"/.exec(snippet)?.[1]];
+    expect(src).toBe("https://app.example.com/widget.js");
+    expect(src).not.toMatch(/\s/);
+    expect(key).not.toMatch(/\s/);
+  });
+
+  it("links Test it to the widget preview (Customize)", () => {
+    const html = renderToStaticMarkup(<InstallView projectId={PROJECT} snippet={snippet} />);
+    expect(html).toContain(`href="/dashboard/projects/${PROJECT}/customize"`);
+    expect(html).toContain("Open the widget preview");
+  });
+
+  it("draws the code card dark in both themes", () => {
+    const html = renderToStaticMarkup(<InstallView projectId={PROJECT} snippet={snippet} />);
+    expect(html).toMatch(/<section[^>]*class="theme-dark [^"]*"/);
+  });
+});
+
+describe("createCopyFeedback", () => {
+  afterEach(() => vi.useRealTimers());
+
+  it("shows Copied, then resets to Copy after 2 s", () => {
+    vi.useFakeTimers();
+    const set = vi.fn<(status: CopyStatus) => void>();
+    const feedback = createCopyFeedback(set);
+    expect(COPY_FEEDBACK_MS).toBe(2000);
+
+    feedback.show("copied");
+    expect(set).toHaveBeenLastCalledWith("copied");
+    vi.advanceTimersByTime(1999);
+    expect(set).toHaveBeenLastCalledWith("copied");
+    vi.advanceTimersByTime(1);
+    expect(set).toHaveBeenLastCalledWith("idle");
+    expect(set).toHaveBeenCalledTimes(2);
+  });
+
+  it("restarts the countdown on a second copy, and resets a failure too", () => {
+    vi.useFakeTimers();
+    const set = vi.fn<(status: CopyStatus) => void>();
+    const feedback = createCopyFeedback(set);
+    feedback.show("copied");
+    vi.advanceTimersByTime(1500);
+    feedback.show("failed");
+    vi.advanceTimersByTime(1500);
+    expect(set).toHaveBeenLastCalledWith("failed");
+    vi.advanceTimersByTime(500);
+    expect(set).toHaveBeenLastCalledWith("idle");
+    expect(set.mock.calls.filter(([s]) => s === "idle")).toHaveLength(1);
+  });
+
+  it("does nothing after dispose (the button unmounted)", () => {
+    vi.useFakeTimers();
+    const set = vi.fn<(status: CopyStatus) => void>();
+    const feedback = createCopyFeedback(set);
+    feedback.show("copied");
+    feedback.dispose();
+    vi.advanceTimersByTime(5000);
+    expect(set).not.toHaveBeenCalledWith("idle");
+  });
+
+  it("ignores a copy that settles after dispose (left Install mid-copy): no state, no timer", () => {
+    vi.useFakeTimers();
+    const set = vi.fn<(status: CopyStatus) => void>();
+    const feedback = createCopyFeedback(set);
+    feedback.dispose();
+    feedback.show("copied");
+    expect(set).not.toHaveBeenCalled();
+    expect(vi.getTimerCount()).toBe(0);
+  });
+});
+
+describe("SnippetCopyButton", () => {
+  it("starts as Copy with the accessible name e2e uses", () => {
+    const html = renderToStaticMarkup(<SnippetCopyButton projectId={PROJECT} text="x" />);
+    expect(html).toContain('aria-label="Copy install code"');
+    expect(html).toContain(">Copy</span>");
   });
 });
