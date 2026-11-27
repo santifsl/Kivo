@@ -1,10 +1,34 @@
 import { APP_NAME, MAX_MESSAGE_LENGTH } from "@kivo/shared";
+import { ArrowUp, X } from "lucide-react";
 import type { FormEvent, Ref } from "react";
 import type { ChatMessage } from "@/lib/embed/chat-state";
 import { useFollowBottom } from "../../lib/embed/follow-bottom";
+import { K_PATHS } from "../brand/k-mark";
 import { cn } from "../ui/cn";
 
 export const FALLBACK_HEADER = "Chat";
+
+/** The avatar's letter: the first character of the header text, uppercased ("C" if empty). */
+export function avatarLetter(headerText: string): string {
+  const first = Array.from(headerText.trim())[0] ?? Array.from(FALLBACK_HEADER)[0] ?? "";
+  return first.toLocaleUpperCase();
+}
+
+/** A round avatar with the header's first letter. Decorative: the name is in the header. */
+function Avatar({ letter, small = false }: { letter: string; small?: boolean }) {
+  return (
+    <span
+      aria-hidden="true"
+      data-testid="avatar"
+      className={cn(
+        "flex shrink-0 items-center justify-center rounded-full bg-accent font-semibold text-accent-ink",
+        small ? "size-6 text-xs" : "size-9 text-sm",
+      )}
+    >
+      {letter}
+    </span>
+  );
+}
 
 export type PanelViewProps = {
   phase: "loading" | "error" | "ready";
@@ -25,30 +49,27 @@ export type PanelViewProps = {
 export function PanelView(props: PanelViewProps) {
   const { phase, headerText, onClose } = props;
   return (
-    <section
-      aria-label={headerText}
-      className="flex h-dvh flex-col overflow-hidden border border-line bg-glass backdrop-blur-glass"
-    >
+    <section aria-label={headerText} className="flex h-dvh flex-col overflow-hidden bg-card">
       <header className="flex items-center gap-3 border-b border-line px-4 py-3">
-        <span aria-hidden="true" className="size-2.5 shrink-0 rounded-sm bg-ink" />
-        <h1 className="min-w-0 flex-1 truncate font-semibold text-ink">{headerText}</h1>
+        <Avatar letter={avatarLetter(headerText)} />
+        <div className="flex min-w-0 flex-1 flex-col">
+          <h1 className="truncate text-sm font-semibold text-ink">{headerText}</h1>
+          <p className="flex items-center gap-1.5 text-xs text-ink-muted">
+            <span
+              aria-hidden="true"
+              data-testid="online-dot"
+              className="size-1.5 rounded-full bg-success"
+            />
+            Online
+          </p>
+        </div>
         <button
           type="button"
           onClick={onClose}
           aria-label="Close chat"
-          className="flex size-8 items-center justify-center rounded-md text-ink-muted transition-colors hover:bg-wash hover:text-ink focus-visible:outline-2 focus-visible:outline-ink"
+          className="flex size-8 items-center justify-center rounded-full text-ink-muted transition-colors hover:bg-wash hover:text-ink focus-visible:outline-2 focus-visible:outline-ink"
         >
-          <svg
-            aria-hidden="true"
-            viewBox="0 0 16 16"
-            className="size-4"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.75"
-            strokeLinecap="round"
-          >
-            <path d="M4 4l8 8M12 4l-8 8" />
-          </svg>
+          <X aria-hidden="true" className="size-4" strokeWidth={1.75} />
         </button>
       </header>
       {phase === "loading" ? <PanelLoading /> : null}
@@ -90,6 +111,7 @@ function PanelError({ onRetry }: { onRetry: () => void }) {
 }
 
 function PanelChat({
+  headerText,
   messages,
   typing,
   error,
@@ -100,6 +122,7 @@ function PanelChat({
   inputRef,
 }: PanelViewProps) {
   const canSend = draft.trim().length > 0 && !typing;
+  const letter = avatarLetter(headerText);
   // Follow new messages while the visitor is at the bottom; keep their place if they scrolled up.
   const {
     ref: listRef,
@@ -126,36 +149,46 @@ function PanelChat({
             Ask a question and we&apos;ll answer right away.
           </li>
         ) : null}
-        {messages.map((m) => (
-          <li
-            key={m.id}
-            data-role={m.role}
-            className={cn(
-              "max-w-[85%] rounded-lg px-3.5 py-2 text-sm break-words whitespace-pre-wrap",
-              m.role === "visitor"
-                ? "self-end bg-accent text-accent-ink"
-                : "self-start border border-line bg-wash text-ink",
-            )}
-          >
-            <span className="sr-only">{m.role === "visitor" ? "You: " : "Bot: "}</span>
-            {/* Text only, never HTML (docs/project.md §9 XSS). */}
-            {m.text}
-          </li>
-        ))}
+        {messages.map((m) =>
+          m.role === "visitor" ? (
+            <li
+              key={m.id}
+              data-role={m.role}
+              className="max-w-[85%] self-end rounded-xl rounded-br-sm bg-accent px-3.5 py-2 text-sm break-words whitespace-pre-wrap text-accent-ink"
+            >
+              <span className="sr-only">You: </span>
+              {/* Text only, never HTML (docs/project.md §9 XSS). */}
+              {m.text}
+            </li>
+          ) : (
+            <li
+              key={m.id}
+              data-role={m.role}
+              className="flex max-w-[88%] items-end gap-2 self-start"
+            >
+              <Avatar letter={letter} small />
+              <p className="min-w-0 rounded-xl rounded-bl-sm bg-wash-strong px-3.5 py-2 text-sm break-words whitespace-pre-wrap text-ink">
+                <span className="sr-only">Bot: </span>
+                {/* Text only, never HTML (docs/project.md §9 XSS). */}
+                {m.text}
+              </p>
+            </li>
+          ),
+        )}
         {typing ? (
-          <li
-            data-testid="typing"
-            className="flex gap-1 self-start rounded-lg border border-line bg-wash px-3.5 py-3"
-          >
-            <span className="sr-only">Typing…</span>
-            {[0, 1, 2].map((i) => (
-              <span
-                key={i}
-                aria-hidden="true"
-                className="size-1.5 animate-pulse rounded-full bg-ink-muted"
-                style={{ animationDelay: `${i * 150}ms` }}
-              />
-            ))}
+          <li data-testid="typing" className="flex items-end gap-2 self-start">
+            <Avatar letter={letter} small />
+            <span className="flex gap-1 rounded-xl rounded-bl-sm bg-wash-strong px-3.5 py-3">
+              <span className="sr-only">Typing…</span>
+              {[0, 1, 2].map((i) => (
+                <span
+                  key={i}
+                  aria-hidden="true"
+                  className="size-1.5 animate-pulse rounded-full bg-ink-muted"
+                  style={{ animationDelay: `${i * 150}ms` }}
+                />
+              ))}
+            </span>
           </li>
         ) : null}
       </ol>
@@ -164,7 +197,7 @@ function PanelChat({
           {error}
         </p>
       ) : null}
-      <form onSubmit={submit} className="flex items-center gap-2 border-t border-line px-3 py-3">
+      <form onSubmit={submit} className="flex items-center gap-2 border-t border-line p-3">
         <input
           ref={inputRef}
           value={draft}
@@ -173,19 +206,32 @@ function PanelChat({
           placeholder="Ask a question…"
           aria-label="Message"
           autoComplete="off"
-          className="h-10 min-w-0 flex-1 rounded-md border border-line bg-wash px-3 text-base text-ink placeholder:text-ink-subtle focus-visible:outline-2 focus-visible:outline-ink sm:text-sm"
+          className="h-10 min-w-0 flex-1 rounded-full border border-line-strong bg-card px-4 text-base text-ink placeholder:text-ink-subtle focus-visible:border-ink focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-ink sm:text-sm"
         />
         <button
           type="submit"
           disabled={!canSend}
-          className="h-10 rounded-md bg-accent px-4 text-sm font-medium text-accent-ink transition-colors hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:opacity-50"
+          aria-label="Send"
+          className="flex size-10 shrink-0 items-center justify-center rounded-full bg-accent text-accent-ink transition-colors hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:cursor-not-allowed disabled:opacity-40"
         >
-          Send
+          <ArrowUp aria-hidden="true" className="size-4" strokeWidth={2} />
         </button>
       </form>
       {showBadge ? (
-        <p className="pb-2 text-center text-xs text-ink-subtle">
-          <a href="/" target="_blank" rel="noopener" className="hover:text-ink">
+        <p className="pb-2.5 text-center text-xs text-ink-subtle">
+          <a
+            href="/"
+            target="_blank"
+            rel="noopener"
+            data-testid="powered-by"
+            className="inline-flex items-center gap-1.5 rounded-sm hover:text-ink focus-visible:outline-2 focus-visible:outline-ink"
+          >
+            <svg aria-hidden="true" viewBox="0 0 32 32" className="size-3 text-ink">
+              {/* The Kivo K, without the logo module (no brand fonts in the panel). */}
+              {K_PATHS.map((d) => (
+                <path key={d} d={d} fill="currentColor" />
+              ))}
+            </svg>
             Powered by {APP_NAME}
           </a>
         </p>
