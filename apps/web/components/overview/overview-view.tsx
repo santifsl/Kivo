@@ -51,10 +51,10 @@ export function OverviewView({
           }
           sub={
             usage ? (
-              <span className="flex flex-col gap-2">
+              <div className="flex flex-col gap-2">
                 <UsageBar ratio={usage.ratio} />
                 Resets {usage.resetsOn}
-              </span>
+              </div>
             ) : (
               "Usage unavailable"
             )

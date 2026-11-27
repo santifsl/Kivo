@@ -23,4 +23,37 @@ describe("WidgetPreview", () => {
     // Nothing pins it to the frame's edge.
     expect(classes.some((c) => /^(inset|top|bottom|left|right)-(0|px)$/.test(c))).toBe(false);
   });
+
+  it("draws the real widget panel (components/embed), not a copy", () => {
+    const out = renderToStaticMarkup(
+      <WidgetPreview config={{ ...DEFAULT_WIDGET_CONFIG, header_text: "Acme help" }} />,
+    );
+    // PanelView in preview mode: avatar with the header's letter, Online dot, round input,
+    // the icon send button and the badge.
+    expect(out).toContain('data-preview="true"');
+    expect(out).toMatch(/data-testid="avatar"[^>]*>A</);
+    expect(out).toContain('data-testid="online-dot"');
+    expect(out).toMatch(/<input[^>]*placeholder="Ask a question…"[^>]*rounded-full/);
+    expect(out).toMatch(/<button[^>]*aria-label="Send"[^>]*><svg/);
+    expect(out).toContain('data-testid="powered-by"');
+    // The old hand-drawn copy is gone: no text "Send" button.
+    expect(out).not.toMatch(/>Send</);
+    // Still inside the light customer-site frame, with no second h1 on the dashboard page.
+    expect(out).toMatch(/data-testid="preview-frame"[\s\S]*data-preview="true"/);
+    expect(out).not.toContain("<h1");
+  });
+
+  it("follows the badge setting like the real panel", () => {
+    const out = renderToStaticMarkup(<WidgetPreview config={{ ...DEFAULT_WIDGET_CONFIG, show_badge: false }} />);
+    expect(out).not.toContain("Powered by");
+  });
+
+  it("fits the open panel in the stage whatever the label's length", () => {
+    const out = renderToStaticMarkup(<WidgetPreview config={DEFAULT_WIDGET_CONFIG} />);
+    // The anchor is capped at the stage minus both 20 px insets, the launcher keeps its size and
+    // the panel shrinks into the rest (a long label wraps the button onto several lines).
+    expect(anchorClasses(out)).toContain("max-h-[calc(100%-2.5rem)]");
+    expect(out).toMatch(/<button[^>]*aria-expanded="true"[^>]*class="[^"]*shrink-0/);
+    expect(out).toMatch(/data-animation="fade" class="[^"]*min-h-0[^"]*shrink/);
+  });
 });

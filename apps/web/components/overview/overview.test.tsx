@@ -99,6 +99,9 @@ describe("OverviewView", () => {
     expect(html).toContain("1,234");
     expect(html).toMatch(/2<span[^>]*> \/ 3<\/span>/);
     expect(html).toContain("1 ready");
+    // Valid nesting, so hydration matches: no block element inside a <p> or <span>.
+    for (const [paragraph] of html.matchAll(/<p[ >][\s\S]*?<\/p>/g)) expect(paragraph).not.toMatch(/<(div|ul|ol|section)[ >]/);
+    expect(html).not.toMatch(/<span[^>]*>(?:(?!<\/span>)[\s\S])*?<div/);
   });
 
   it("shows the Get started checklist until a source is ready, and an empty recent list", () => {

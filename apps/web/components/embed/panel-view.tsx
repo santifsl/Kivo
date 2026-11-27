@@ -43,17 +43,28 @@ export type PanelViewProps = {
   onClose: () => void;
   onRetry: () => void;
   inputRef?: Ref<HTMLInputElement>;
+  /**
+   * The dashboard's Customize preview: the same panel, filling its container instead of the
+   * iframe viewport, with the header as text (not the page's h1) and the chat controls out of
+   * the tab order. The live widget never sets it.
+   */
+  preview?: boolean;
 };
 
 /** The chat panel inside the widget iframe. Pure view: all state lives in EmbedApp. */
 export function PanelView(props: PanelViewProps) {
-  const { phase, headerText, onClose } = props;
+  const { phase, headerText, onClose, preview = false } = props;
+  const Title = preview ? "p" : "h1";
   return (
-    <section aria-label={headerText} className="flex h-dvh flex-col overflow-hidden bg-card">
+    <section
+      aria-label={headerText}
+      data-preview={preview || undefined}
+      className={cn("flex flex-col overflow-hidden bg-card", preview ? "h-full" : "h-dvh")}
+    >
       <header className="flex items-center gap-3 border-b border-line px-4 py-3">
         <Avatar letter={avatarLetter(headerText)} />
         <div className="flex min-w-0 flex-1 flex-col">
-          <h1 className="truncate text-sm font-semibold text-ink">{headerText}</h1>
+          <Title className="truncate text-sm font-semibold text-ink">{headerText}</Title>
           <p className="flex items-center gap-1.5 text-xs text-ink-muted">
             <span
               aria-hidden="true"
@@ -120,7 +131,10 @@ function PanelChat({
   onDraftChange,
   onSubmit,
   inputRef,
+  preview = false,
 }: PanelViewProps) {
+  // In the preview the controls are only a picture of the widget: not in the tab order.
+  const previewOnly = preview ? ({ tabIndex: -1 } as const) : {};
   const canSend = draft.trim().length > 0 && !typing;
   const letter = avatarLetter(headerText);
   // Follow new messages while the visitor is at the bottom; keep their place if they scrolled up.
@@ -206,12 +220,15 @@ function PanelChat({
           placeholder="Ask a question…"
           aria-label="Message"
           autoComplete="off"
+          readOnly={preview}
+          {...previewOnly}
           className="h-10 min-w-0 flex-1 rounded-full border border-line-strong bg-card px-4 text-base text-ink placeholder:text-ink-subtle focus-visible:border-ink focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-ink sm:text-sm"
         />
         <button
           type="submit"
           disabled={!canSend}
           aria-label="Send"
+          {...previewOnly}
           className="flex size-10 shrink-0 items-center justify-center rounded-full bg-accent text-accent-ink transition-colors hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:cursor-not-allowed disabled:opacity-40"
         >
           <ArrowUp aria-hidden="true" className="size-4" strokeWidth={2} />
@@ -224,6 +241,7 @@ function PanelChat({
             target="_blank"
             rel="noopener"
             data-testid="powered-by"
+            {...previewOnly}
             className="inline-flex items-center gap-1.5 rounded-sm hover:text-ink focus-visible:outline-2 focus-visible:outline-ink"
           >
             <svg aria-hidden="true" viewBox="0 0 32 32" className="size-3 text-ink">

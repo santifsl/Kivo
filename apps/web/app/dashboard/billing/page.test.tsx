@@ -7,7 +7,7 @@ import BillingPage from "./page";
 
 const { clerk, openCheckout, openSubscription, protect, owner } = vi.hoisted(() => ({
   owner: { plan: "free" as "free" | "pro" | null },
-  clerk: { status: "ready", checkoutComplete: false, pricingReady: true },
+  clerk: { status: "ready", checkoutComplete: false, pricingReady: true, pro: false },
   openCheckout: vi.fn(),
   openSubscription: vi.fn(),
   protect: vi.fn(),
@@ -16,6 +16,8 @@ const { clerk, openCheckout, openSubscription, protect, owner } = vi.hoisted(() 
 vi.mock("@clerk/nextjs/server", () => ({ auth: { protect } }));
 vi.mock("../../../lib/accounts/get-owner-plan", () => ({ getOwnerPlan: async () => owner.plan }));
 vi.mock("@clerk/nextjs", () => ({
+  // Clerk's view of the plan (session claims). Only picks the card's button.
+  useAuth: () => ({ has: ({ plan }: { plan: string }) => plan === "pro" && clerk.pro }),
   ClerkFailed: ({ children }: { children: ReactNode }) =>
     clerk.status === "failed" ? children : null,
   ClerkLoaded: ({ children }: { children: ReactNode }) =>
@@ -58,6 +60,7 @@ beforeEach(() => {
   clerk.status = "ready";
   clerk.checkoutComplete = false;
   clerk.pricingReady = true;
+  clerk.pro = false;
   owner.plan = "free";
   container = document.createElement("div");
   document.body.append(container);
@@ -100,9 +103,14 @@ it("protects the route and uses Clerk's personal plans and checkout", async () =
 });
 
 it("opens Clerk's personal subscription management while billing sync is pending", async () => {
-  // The Clerk checkout has completed while the account update can still be pending.
+  // The Clerk checkout has completed while the account update can still be pending:
+  // our row still says Free, Clerk's session already has Pro.
   clerk.checkoutComplete = true;
+  clerk.pro = true;
   await renderBilling();
+  const card = container.querySelector('[aria-labelledby="current-plan-heading"]');
+  expect(card?.querySelector("h2")?.textContent).toBe("Free plan");
+  expect(card?.querySelector('a[href="#plans"]')).toBeNull();
   expect(container.textContent).toContain("Current plan");
   await act(async () => button("Manage subscription").click());
   expect(openSubscription).toHaveBeenCalledExactlyOnceWith("user");
@@ -123,7 +131,7 @@ it("shows the dashboard error state when Clerk fails to load", async () => {
   expect(container.textContent).not.toContain("Manage subscription");
 });
 
-it("shows the current plan card with what's included and one Manage subscription button", async () => {
+it("shows the Free card with what's included and Upgrade to Pro, not Manage subscription", async () => {
   await renderBilling();
   const card = container.querySelector('[aria-labelledby="current-plan-heading"]');
   expect(card?.querySelector("h2")?.textContent).toBe("Free plan");
@@ -132,9 +140,11 @@ it("shows the current plan card with what's included and one Manage subscription
   expect(card?.textContent).toContain("100 messages per project each month");
   expect(card?.textContent).toContain("3 knowledge sources per project");
   expect(card?.textContent).toContain("The default widget look");
-  const manage = [...container.querySelectorAll("button")].filter((b) => b.textContent === "Manage subscription");
-  expect(manage).toHaveLength(1);
-  expect(card?.contains(manage[0] ?? null)).toBe(true);
+  // Free has no subscription to manage: the card links to the plans table instead.
+  const upgrade = card?.querySelector<HTMLAnchorElement>('a[href="#plans"]');
+  expect(upgrade?.textContent).toBe("Upgrade to Pro");
+  expect(container.querySelector("#plans")?.getAttribute("aria-label")).toBe("Subscription plans");
+  expect(container.textContent).not.toContain("Manage subscription");
 });
 
 it("describes Pro from the shared limits", async () => {
@@ -146,6 +156,11 @@ it("describes Pro from the shared limits", async () => {
   expect(card?.textContent).toContain("5 projects");
   expect(card?.textContent).toContain("2,000 messages per project each month");
   expect(card?.textContent).toContain("Full widget customization");
+  // Pro keeps Clerk's subscription management, exactly once, in the card.
+  const manage = [...container.querySelectorAll("button")].filter((b) => b.textContent === "Manage subscription");
+  expect(manage).toHaveLength(1);
+  expect(card?.contains(manage[0] ?? null)).toBe(true);
+  expect(card?.querySelector('a[href="#plans"]')).toBeNull();
 });
 
 it("still renders when the plan can't be read", async () => {
