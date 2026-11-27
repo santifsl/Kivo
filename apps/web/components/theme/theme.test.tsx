@@ -1,11 +1,13 @@
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  THEME_CHANGE_EVENT,
   THEME_STORAGE_KEY,
   applyTheme,
   isUnthemedPath,
   parseThemeChoice,
   resolveTheme,
+  setThemeChoice,
 } from "./theme";
 import { THEME_SCRIPT } from "./theme-script";
 import { ThemeSwitchView } from "./theme-switch";
@@ -147,5 +149,49 @@ describe("ThemeSwitchView", () => {
     const out = html(value);
     expect(out.match(/aria-checked="true"/g)).toHaveLength(1);
     expect(out).toMatch(new RegExp(`aria-checked="true"[^>]*data-theme-option="${value}"`));
+  });
+});
+
+describe("setThemeChoice (what ThemeSwitch calls)", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  function page(pathname = "/dashboard", systemDark = false) {
+    const store = new Map<string, string>();
+    const root = fakeRoot();
+    const events: string[] = [];
+    vi.stubGlobal("window", {
+      localStorage: {
+        getItem: (k: string) => store.get(k) ?? null,
+        setItem: (k: string, v: string) => void store.set(k, v),
+      },
+      matchMedia: () => ({ matches: systemDark }),
+      location: { pathname },
+      dispatchEvent: (e: Event) => void events.push(e.type),
+    });
+    vi.stubGlobal("document", { documentElement: root });
+    return { store, root, events };
+  }
+
+  it("saves the choice, applies it to <html> and tells listeners", () => {
+    const { store, root, events } = page();
+    setThemeChoice("dark");
+    expect(store.get(THEME_STORAGE_KEY)).toBe("dark");
+    expect(themeClass(root)).toEqual(["dark"]);
+    expect(events).toEqual([THEME_CHANGE_EVENT]);
+    setThemeChoice("light");
+    expect(themeClass(root)).toEqual(["light"]);
+  });
+
+  it("System applies the OS preference", () => {
+    const { root } = page("/dashboard", true);
+    setThemeChoice("system");
+    expect(themeClass(root)).toEqual(["dark"]);
+  });
+
+  it("never themes /embed", () => {
+    const { store, root } = page("/embed");
+    setThemeChoice("dark");
+    expect(store.get(THEME_STORAGE_KEY)).toBe("dark");
+    expect(themeClass(root)).toEqual([]);
   });
 });
