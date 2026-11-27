@@ -4,7 +4,6 @@ import { describe, expect, it, vi } from "vitest";
 import { formatProjectDate } from "./format-date";
 import { isAtProjectLimit, projectLimitMessage } from "./project-limit";
 import { DEFAULT_PROJECT_TAB, getActiveTab, PROJECT_TABS, projectTabHref } from "./project-tabs";
-import { ProjectTabsView } from "./project-tabs-nav";
 import { createProjectRequest, deleteProjectRequest, renameProjectRequest } from "./projects-api";
 import { ProjectsScreen, type ProjectsHandlers } from "./projects-screen";
 import {
@@ -51,6 +50,35 @@ describe("ProjectsScreen", () => {
     expect(html).toContain("Nov 19, 2026");
     expect(html).toContain('href="/dashboard/projects/11111111-1111-4111-8111-111111111111"');
     expect(html).not.toContain("No projects yet");
+  });
+
+  it("shows each card's usage with its bar, reset date and Install link", () => {
+    const html = renderToStaticMarkup(
+      <ProjectsScreen
+        state={state([project({ messages_used: 38 }), other], "free")}
+        handlers={noop}
+        now={new Date("2026-11-27T12:00:00Z")}
+      />,
+    );
+    expect(html.match(/data-testid="project-card"/g)).toHaveLength(2);
+    expect(html).toContain("38 / 100");
+    expect(html).toContain("messages this month");
+    expect(html).toContain('style="width:38%"');
+    expect(html).toContain("Resets Dec 1, 2026");
+    expect(html).toContain('href="/dashboard/projects/11111111-1111-4111-8111-111111111111/install"');
+    expect(html).toContain('aria-label="Install Acme docs"');
+  });
+
+  it("counts a project's previous month as rolled over on its card", () => {
+    const html = renderToStaticMarkup(
+      <ProjectsScreen
+        state={state([project({ messages_used: 90, period_start: "2026-10-01T00:00:00Z" })])}
+        handlers={noop}
+        now={new Date("2026-11-27T12:00:00Z")}
+      />,
+    );
+    expect(html).toContain("0 / 100");
+    expect(html).toContain('style="width:0%"');
   });
 
   it("shows the empty state with the create form when there are no projects", () => {
@@ -258,14 +286,16 @@ describe("projects API client", () => {
 describe("project tabs", () => {
   const id = project().id;
 
-  it("lists Customize alongside the other tabs and defaults to Install", () => {
-    expect(PROJECT_TABS.map((t) => t.segment)).toEqual([
-      "knowledge",
-      "conversations",
-      "customize",
-      "install",
+  it("lists Overview first, then the sections, and opens on Overview", () => {
+    expect(PROJECT_TABS.map((t) => t.label)).toEqual([
+      "Overview",
+      "Knowledge",
+      "Conversations",
+      "Customize",
+      "Install",
     ]);
-    expect(DEFAULT_PROJECT_TAB.segment).toBe("install");
+    expect(DEFAULT_PROJECT_TAB.label).toBe("Overview");
+    expect(projectTabHref(id, DEFAULT_PROJECT_TAB)).toBe(`/dashboard/projects/${id}`);
   });
 
   it.each([
@@ -274,16 +304,12 @@ describe("project tabs", () => {
     [`/dashboard/projects/${id}/conversations/${id}`, "conversations"],
     [`/dashboard/projects/${id}/customize`, "customize"],
     [`/dashboard/projects/${id}/install/`, "install"],
-    [`/dashboard/projects/${id}`, null],
+    [`/dashboard/projects/${id}`, ""],
+    [`/dashboard/projects/${id}/`, ""],
     [`/dashboard/projects/${id}/installx`, null],
+    [`/dashboard/projects/other`, null],
   ])("%s → %s", (path, expected) => {
     expect(getActiveTab(path, id)?.segment ?? null).toBe(expected);
-  });
-
-  it("marks the active tab", () => {
-    const html = renderToStaticMarkup(<ProjectTabsView projectId={id} activeSegment="install" />);
-    expect(html).toContain(`href="${projectTabHref(id, DEFAULT_PROJECT_TAB)}"`);
-    expect(html).toContain('aria-current="page"');
   });
 });
 

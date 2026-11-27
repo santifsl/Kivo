@@ -1,6 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { ProjectUsage } from "./project-usage";
+import { monthlyUsage } from "./usage";
 
 const now = new Date("2026-12-01T00:00:00.000Z");
 const project = { messages_used: 99, period_start: "2026-12-01T00:00:00.000Z" };
@@ -38,5 +39,30 @@ describe("ProjectUsage", () => {
     const html = renderToStaticMarkup(<ProjectUsage project={project} plan={null} now={now} />);
     expect(html).toContain("Message usage unavailable");
     expect(html).not.toContain("99 / 100");
+  });
+});
+
+describe("monthlyUsage", () => {
+  it("gives used, limit, a 0–1 ratio and the next UTC month's first day", () => {
+    expect(monthlyUsage({ messages_used: 38, period_start: "2026-11-02T00:00:00Z" }, "free", new Date("2026-11-27T12:00:00Z"))).toEqual({
+      used: 38,
+      limit: 100,
+      ratio: 0.38,
+      resetsOn: "Dec 1, 2026",
+    });
+  });
+
+  it("rolls over at the UTC month start, and resets on Jan 1 in December", () => {
+    const december = new Date("2026-12-15T00:00:00Z");
+    const usage = monthlyUsage({ messages_used: 80, period_start: "2026-11-30T23:00:00Z" }, "pro", december);
+    expect(usage.used).toBe(0);
+    expect(usage.ratio).toBe(0);
+    expect(usage.resetsOn).toBe("Jan 1, 2027");
+  });
+
+  it("caps the bar at full when over the limit (after a downgrade)", () => {
+    const usage = monthlyUsage({ messages_used: 125, period_start: "2026-12-01T00:00:00Z" }, "free", now);
+    expect(usage.used).toBe(125);
+    expect(usage.ratio).toBe(1);
   });
 });
