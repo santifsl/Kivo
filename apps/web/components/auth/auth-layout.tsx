@@ -1,6 +1,6 @@
 "use client";
 
-import { SignIn, SignUp } from "@clerk/nextjs";
+import { ClerkLoaded, ClerkLoading, SignIn, SignUp } from "@clerk/nextjs";
 import { APP_NAME } from "@kivo/shared";
 import { ArrowLeft, BookOpenCheck, CodeXml, Sparkles } from "lucide-react";
 import Link from "next/link";
@@ -68,10 +68,20 @@ function AuthForm({ mode }: { mode: AuthMode }) {
   const appearance = useAuthAppearance();
   const loading = <LoadingState label="Loading…" rows={3} />;
   if (!appearance) return loading;
+  // Clerk renders nothing until its script loads, so show the loading state until then.
   return (
-    <Suspense fallback={loading}>
-      {mode === "sign-in" ? <SignIn appearance={appearance} /> : <SignUp appearance={appearance} />}
-    </Suspense>
+    <>
+      <ClerkLoading>{loading}</ClerkLoading>
+      <ClerkLoaded>
+        <Suspense fallback={loading}>
+          {mode === "sign-in" ? (
+            <SignIn appearance={appearance} />
+          ) : (
+            <SignUp appearance={appearance} />
+          )}
+        </Suspense>
+      </ClerkLoaded>
+    </>
   );
 }
 

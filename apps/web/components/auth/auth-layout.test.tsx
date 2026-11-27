@@ -7,6 +7,8 @@ import { AUTH_BENEFITS, AUTH_COPY, CLERK_ELEMENTS, withAuthElements } from "./au
 
 vi.mock("next/font/google", () => ({ Inter: () => ({ className: "font-inter" }) }));
 vi.mock("@clerk/nextjs", () => ({
+  ClerkLoading: () => null,
+  ClerkLoaded: ({ children }: { children: React.ReactNode }) => children,
   SignIn: () => <div data-clerk="sign-in" />,
   SignUp: () => <div data-clerk="sign-up" />,
 }));
