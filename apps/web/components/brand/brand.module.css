@@ -1,0 +1,141 @@
+/*
+ * Brand colors (URK-T03). Ink #0B0B0C, Paper #F7F7F6, Graphite #2A2A2D / #434345,
+ * Stone #B6B6B8, Terracotta #C96A3F (the only accent). Hex lives here, not in TSX:
+ * components/tokens.test.ts keeps colors out of .ts/.tsx files.
+ */
+
+/* ---- Logo ---------------------------------------------------------------- */
+
+.mark {
+  display: block;
+  flex: none;
+}
+
+.toneInk {
+  color: #0b0b0c;
+}
+
+.tonePaper {
+  color: #f7f7f6;
+}
+
+.tileInk {
+  fill: #0b0b0c;
+}
+
+.tilePaper {
+  fill: #f7f7f6;
+}
+
+.glyphInk {
+  fill: #0b0b0c;
+}
+
+.glyphPaper {
+  fill: #f7f7f6;
+}
+
+.logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.42em;
+}
+
+.wordmark {
+  font-family: var(--font-inter, "Inter"), ui-sans-serif, system-ui, sans-serif;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+
+/* ---- Hero art ------------------------------------------------------------ */
+
+.hero {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  contain: strict;
+  background: #0b0b0c;
+}
+
+.heroSvg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* No fill here: the far and mid ridges are filled by gradients in hero-art.tsx, and a CSS
+   fill would override that presentation attribute. */
+.ridgeFar {
+  opacity: 0.55;
+}
+
+.ridgeNear {
+  fill: #19191b;
+}
+
+.ridgeFront {
+  fill: #0b0b0c;
+}
+
+.ink0 {
+  stop-color: #0b0b0c;
+}
+
+.graphiteDark {
+  stop-color: #2a2a2d;
+}
+
+.graphiteLight {
+  stop-color: #434345;
+}
+
+.terracotta {
+  stop-color: #c96a3f;
+}
+
+.edge {
+  fill: none;
+  stroke-linejoin: round;
+  opacity: 0.85;
+}
+
+/* Soft, blurred rim under the crisp line. */
+.edgeGlow {
+  stroke-width: 2.5;
+}
+
+.edgeLine {
+  stroke-width: 1.2;
+}
+
+.glow {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: drift 18s ease-in-out infinite alternate;
+}
+
+.grain {
+  mix-blend-mode: overlay;
+  opacity: 0.22;
+}
+
+@keyframes drift {
+  from {
+    transform: translate3d(-2%, 1%, 0) scale(1);
+    opacity: 0.85;
+  }
+  to {
+    transform: translate3d(2%, -1%, 0) scale(1.06);
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .glow {
+    animation: none;
+  }
+}
