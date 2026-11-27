@@ -40,6 +40,20 @@ main `634f3bb` (redesign done, CI green). The PO does every step here; agents ne
 - [ ] Reload the landing page. The chat button appears and answers a question about Kivo.
 
 ## 6. Verify
-- [ ] Send the prod URL to Michael. Jim runs `pnpm e2e:core <prod-url>` and `node e2e/redesign-audit.ts <prod-url>`.
-- [ ] Steps 8–9 (upgrade to Pro, new button color) are skipped on live Clerk. Do one real upgrade by hand: Billing → Pro → Customize unlocks → change the color → the widget shows it on reload. This confirms the webhook.
-- [ ] PostHog: the events from the test show up.
+
+The visual audit (`node e2e/redesign-audit.ts`) runs on Previews only. It already passed on a Preview of this exact code (see `e2e/screenshots/redesign/README.md`), so don't run it on production.
+
+**Option A (recommended): check the core flow by hand, about 10 minutes.** These are the nine steps of `docs/project.md` §2:
+- [ ] 1–2. Landing: the chat button shows and answers a question about Kivo.
+- [ ] 3. Sign up, create a project, upload a small PDF, and wait for Ready.
+- [ ] 4–5. Paste the Install snippet into a plain HTML page on another origin. The widget appears and answers from the PDF.
+- [ ] 6. Conversations shows that chat.
+- [ ] 7. Customize shows the paywall.
+- [ ] 8. Upgrade to Pro on Billing with a real card (refund it afterwards). Customize unlocks. This confirms the prod webhook.
+- [ ] 9. Change the button color, then reload the HTML page. The new color shows.
+- [ ] PostHog: the events from these steps show up.
+
+**Option B: the automated run (`pnpm e2e:core <prod-url>`).** It needs extra setup:
+- [ ] Turn on test mode in the **production** Clerk instance for the run. Sign-up uses a `+clerk_test` address and the code `424242`. Turn it off afterwards.
+- [ ] Run it from a machine with Chromium (`pnpm exec playwright install chromium`) and the **prod** values of `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`, `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SECRET_KEY` in its shell. These are needed for sign-up and cleanup, so never put them in a developer's dev variables.
+- [ ] Steps 8–9 are skipped on live Billing (no test card). Do steps 8–9 from Option A by hand.
