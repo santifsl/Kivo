@@ -111,7 +111,7 @@ export async function signUp(page: Page, origin: string, email: string): Promise
   return id;
 }
 
-/** Creates a project from the dashboard and opens it (its Overview). Returns the project ID. */
+/** Creates a project from the dashboard, opens it, then its Install page. Returns the project ID. */
 export async function createProject(page: Page, name: string): Promise<string> {
   await page.getByRole("textbox", { name: "New project" }).fill(name);
   await page.getByRole("button", { name: "Create project" }).click();
@@ -119,6 +119,9 @@ export async function createProject(page: Page, name: string): Promise<string> {
   await page.waitForURL(/\/projects\/[0-9a-f-]{36}$/);
   const projectId = /\/projects\/([0-9a-f-]{36})$/.exec(new URL(page.url()).pathname)?.[1];
   assert(projectId, "Expected the new project's Overview page.");
+  // Callers expect the Install page, where creating a project used to land.
+  await page.getByRole("link", { name: "Install", exact: true }).click();
+  await page.waitForURL(/\/install$/);
   return projectId;
 }
 
