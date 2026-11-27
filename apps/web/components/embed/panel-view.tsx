@@ -154,7 +154,7 @@ function PanelChat({
             <li
               key={m.id}
               data-role={m.role}
-              className="max-w-[85%] self-end rounded-2xl rounded-br-md bg-accent px-3.5 py-2 text-sm break-words whitespace-pre-wrap text-accent-ink"
+              className="max-w-[85%] self-end rounded-xl rounded-br-sm bg-accent px-3.5 py-2 text-sm break-words whitespace-pre-wrap text-accent-ink"
             >
               <span className="sr-only">You: </span>
               {/* Text only, never HTML (docs/project.md §9 XSS). */}
@@ -167,7 +167,7 @@ function PanelChat({
               className="flex max-w-[88%] items-end gap-2 self-start"
             >
               <Avatar letter={letter} small />
-              <p className="min-w-0 rounded-2xl rounded-bl-md bg-wash-strong px-3.5 py-2 text-sm break-words whitespace-pre-wrap text-ink">
+              <p className="min-w-0 rounded-xl rounded-bl-sm bg-wash-strong px-3.5 py-2 text-sm break-words whitespace-pre-wrap text-ink">
                 <span className="sr-only">Bot: </span>
                 {/* Text only, never HTML (docs/project.md §9 XSS). */}
                 {m.text}
@@ -178,7 +178,7 @@ function PanelChat({
         {typing ? (
           <li data-testid="typing" className="flex items-end gap-2 self-start">
             <Avatar letter={letter} small />
-            <span className="flex gap-1 rounded-2xl rounded-bl-md bg-wash-strong px-3.5 py-3">
+            <span className="flex gap-1 rounded-xl rounded-bl-sm bg-wash-strong px-3.5 py-3">
               <span className="sr-only">Typing…</span>
               {[0, 1, 2].map((i) => (
                 <span
