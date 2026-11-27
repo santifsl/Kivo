@@ -2,7 +2,7 @@ import type { Plan } from "@kivo/shared";
 import { Check } from "lucide-react";
 import { Badge } from "../ui/badge";
 import { Card } from "../ui/card";
-import { ManageSubscriptionButton } from "./billing-controls";
+import { PlanAction } from "./billing-controls";
 import { describePlan } from "./current-plan";
 
 /** The owner's plan (read on the server), what it includes, and Clerk's subscription management. */
@@ -26,7 +26,7 @@ export function CurrentPlanCard({ plan }: { plan: Plan | null }) {
             {details ? details.price : "We couldn't read your plan. Refresh the page to try again."}
           </p>
         </div>
-        <ManageSubscriptionButton />
+        <PlanAction plan={plan} />
       </div>
       {details ? (
         <ul aria-label="Included" className="grid gap-2 text-sm text-ink sm:grid-cols-2">

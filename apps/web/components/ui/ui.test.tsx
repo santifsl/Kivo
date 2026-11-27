@@ -173,6 +173,24 @@ describe("StatCard", () => {
     expect(out).toContain("of 100 this month");
     expect(html(<StatCard label="Projects" value={3} />)).not.toContain("text-ink-subtle");
   });
+
+  it("takes block content as sub without nesting it in a <p> (invalid HTML breaks hydration)", () => {
+    const out = html(
+      <StatCard
+        label="Messages"
+        value="38"
+        sub={
+          <div data-testid="block">
+            <div className="bar" />
+            Resets Dec 1
+          </div>
+        }
+      />,
+    );
+    expect(out).toContain('data-testid="block"');
+    // No <p> may contain a <div> (the browser would split the <p> and React would hit error #418).
+    for (const [paragraph] of out.matchAll(/<p[ >][\s\S]*?<\/p>/g)) expect(paragraph).not.toContain("<div");
+  });
 });
 
 describe("EmptyState", () => {

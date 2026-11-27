@@ -9,7 +9,7 @@ const render = (plan: "free" | "pro") =>
 
 /** The class attribute of each element matching `tag` inside the settings form. */
 function classesOf(html: string, tag: string): string[] {
-  const form = /<form[\s\S]*<\/form>/.exec(html)?.[0] ?? "";
+  const form = /<form[\s\S]*?<\/form>/.exec(html)?.[0] ?? "";
   return [...form.matchAll(new RegExp(`<${tag}[^>]*class="([^"]*)"`, "g"))].map((m) => m[1] ?? "");
 }
 

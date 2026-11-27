@@ -1,5 +1,8 @@
 import { PLAN_LIMITS, PLAN_PRICES, type Plan } from "@kivo/shared";
 
+/** The pricing table's anchor, so "Upgrade to Pro" can scroll to it. */
+export const PLANS_ID = "plans";
+
 const PLAN_NAMES: Record<Plan, string> = { free: "Free", pro: "Pro" };
 const count = new Intl.NumberFormat("en-US");
 const plural = (n: number, word: string) => `${count.format(n)} ${word}${n === 1 ? "" : "s"}`;
