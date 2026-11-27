@@ -189,6 +189,10 @@
   --accent: var(--color-grey-950);
   --accent-hover: var(--color-grey-800);
   --accent-ink: var(--color-white);
+  /* Pinned so an element inside the dark dashboard (the Customize preview) keeps the widget's colors. */
+  --success: var(--color-green-700);
+  --success-soft: rgb(20 108 52 / 0.1);
+  --danger: var(--color-red-700);
   --wash: rgb(0 0 0 / 0.04);
   --wash-strong: rgb(0 0 0 / 0.08);
   --skeleton: rgb(0 0 0 / 0.07);
