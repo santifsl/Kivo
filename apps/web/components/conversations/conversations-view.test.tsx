@@ -194,9 +194,11 @@ describe("Conversations dashboard", () => {
     expect(bot?.[0]).toContain("bg-wash-strong");
     expect(bot?.[0]).toMatch(/<svg[^>]*aria-hidden="true"/);
     // Next to the list, with this thread's row current; text only inside the thread region.
-    const current = [...html.matchAll(/<a [^>]*aria-current="page"[^>]*>/g)].map((m) => m[0]);
-    expect(current).toHaveLength(1);
-    expect(current[0]).toContain(`href="/dashboard/projects/${PROJECT}/conversations/${OLD_THREAD}"`);
+    // The thread doesn't wait for the list: it streams in behind a fallback, and the static
+    // render made no list reads (no summaries query, no message-count query).
+    expect(html).toContain("Loading conversations…");
+    expect(pg.to("/rest/v1/conversations").filter((r) => isListQuery(r.params))).toHaveLength(0);
+    expect(pg.to("/rest/v1/messages").filter((r) => isCountQuery(r.params))).toHaveLength(0);
     const region = /<section[^>]*aria-labelledby="conversation-heading"[\s\S]*?<\/section>/.exec(html)?.[0] ?? "";
     expect(region.match(/ph-no-capture/g)).toHaveLength(2);
     expect(html.indexOf(">Visitor</span>")).toBeLessThan(html.indexOf(">Bot</span>"));
@@ -232,5 +234,17 @@ describe("Conversations dashboard", () => {
     expect(error).toContain('role="alert"');
     expect(error).toContain("load conversations");
     expect(error).toContain("Try again");
+  });
+});
+
+describe("ConversationList", () => {
+  it("marks only the open thread's row as current", async () => {
+    const { ConversationList } = await import("./conversation-list");
+    const { toConversationRows } = await import("./conversations-view");
+    const rows = toConversationRows(PROJECT, savedList.conversations);
+    const html = renderToStaticMarkup(<ConversationList rows={rows} selectedId={OLD_THREAD} />);
+    const current = [...html.matchAll(/<a [^>]*aria-current="page"[^>]*>/g)].map((m) => m[0]);
+    expect(current).toHaveLength(1);
+    expect(current[0]).toContain(`href="/dashboard/projects/${PROJECT}/conversations/${OLD_THREAD}"`);
   });
 });
