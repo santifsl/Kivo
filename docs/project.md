@@ -371,14 +371,57 @@ Each Vercel environment gets its Supabase project's values: Production → the p
 
 ## 13. Design
 
-Every screen follows this. Agents don't pick their own style.
+Every screen follows this. Agents don't pick their own style. Tokens live only in `apps/web/app/globals.css` (a test fails on colors anywhere else); the shared components live in `apps/web/components/ui`.
 
 | Area | Look |
 |---|---|
-| Overall | Black and white, with glass effects (blurred, translucent panels) |
-| Landing page | Dark, with simple motion: subtle entrance and scroll animations |
-| Dashboard | Light, monochrome, glass panels |
-| Sign-in / sign-up | Clerk's default look |
-| Tokens | One set of design tokens (colors, radius, shadows, blur) shared by every page |
-| States | Empty, loading and error states on every screen |
+| Overall | Quiet, editorial. Ink and paper, one terracotta accent, serif headlines over a clean sans UI |
+| Landing page | Always dark (`.theme-dark`), whatever the owner's theme. Serif headlines with an italic terracotta phrase. Simple motion: subtle entrance and scroll animations |
+| Dashboard | Light "paper" or dark, from the theme switch. White cards on paper in light, graphite cards on ink in dark |
+| Sign-in / sign-up | Follow the theme. Styled to match (logo, link back to the landing page) |
+| Widget panel (`/embed`) | Never themed: keeps its own fixed look and the owner's widget settings |
+| States | Empty (with an icon), loading and error states on every screen |
 | Responsive | Works down to 375 px wide |
+
+### Palette
+
+| Token | Light | Dark | Use |
+|---|---|---|---|
+| Ink | `#0B0B0C` text | `#0B0B0C` canvas | |
+| Paper | `#F7F7F6` canvas | `#F7F7F6` text | |
+| Card | `#FFFFFF` | Graphite `#2A2A2D` | cards, inputs, drawers |
+| Line | Stone `#B6B6B8` hairline | `#434345` | borders, dividers |
+| Muted text | `#5C5C60` | Stone `#B6B6B8` | secondary text |
+| Terracotta | `#C96A3F` | `#C96A3F` | **The only accent**: the italic headline phrase, the eyebrow dash, source/quote bars, focus rings, the active nav indicator, usage bars. Never big fills or body text |
+| Success | `#146C34` | `#4FC987` | the "Active" pill and the "Online" dot only |
+| Danger | `#B42318` | `#F97066` | errors and destructive actions |
+
+Primary buttons are ink on paper (light) or paper on ink (dark), never terracotta. Every text color meets WCAG AA (4.5:1) on its background.
+
+Semantic token names: `canvas`, `card`, `ink`, `ink-muted`, `ink-subtle`, `line`, `line-strong`, `glass`, `glass-strong`, `accent` (primary button), `accent-ink`, `brand` (terracotta), `success`, `success-soft`, `danger`, `wash`, `wash-strong`, `skeleton`.
+
+### Type
+
+- **Display:** Instrument Serif, regular and italic (`font-display`). Page and landing headlines, set large with tight leading (`leading-display`, 1.05) and slight negative tracking (`tracking-display`).
+- **UI and body:** Inter (`font-sans`, the default).
+- **Eyebrow:** a 16px terracotta dash, then 12px uppercase Inter with 0.12em tracking (`Eyebrow`).
+
+### Theme
+
+- Light / Dark / System, System by default. The owner picks it with `ThemeSwitch` (sun / moon / monitor). It's saved in localStorage and applied to `<html>` before first paint by an inline script, so there's no flash.
+- The dashboard and sign-in/up follow it. The landing page is always dark. `/embed` is never themed.
+- Clerk's components (pricing table, checkout, subscription drawer) get the current theme's resolved colors (`components/auth/clerk-appearance.ts`), never `var()`s.
+
+### Components (`components/ui`)
+
+| Component | Look |
+|---|---|
+| `Button` | `primary` solid pill (optional trailing ↗), `secondary` outline pill, `ghost`. Disabled keeps its shape at 40% opacity with a not-allowed cursor |
+| `Badge` | `neutral` pill, or `success` with a green dot ("Active") |
+| `Card` | 16px radius, 1px line, soft shadow in light, graphite in dark. `GlassPanel` stays for existing pages |
+| `Input`, `Textarea` | Rounded, terracotta focus ring, red border when invalid |
+| `StatCard` | Label, big serif number, optional sub-text |
+| `Eyebrow`, `PageHeader` | Serif page title with optional badge, breadcrumb and actions |
+| `EmptyState`, `LoadingState`, `ErrorState` | Every screen's states. Empty and error show an icon |
+
+Icons come from `lucide-react`.

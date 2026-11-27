@@ -23,6 +23,7 @@
     "@kivo/db": "workspace:*",
     "@kivo/shared": "workspace:*",
     "@supabase/supabase-js": "2.118.0",
+    "lucide-react": "0.555.0",
     "next": "16.4.5",
     "openai": "7.62.0",
     "posthog-js": "^1.453.2",
