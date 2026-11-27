@@ -1,8 +1,14 @@
 import { APP_NAME, DEFAULT_WIDGET_CONFIG, type WidgetConfig } from "@kivo/shared";
 import { useId, useState } from "react";
 import { cn } from "../ui/cn";
-import { GlassPanel } from "../ui/glass-panel";
+import { Card } from "../ui/card";
 import styles from "./widget-preview.module.css";
+
+/**
+ * Where the launcher sits in the frame: 20 px from both edges of its corner,
+ * like the real widget on a page (audit #11).
+ */
+export const LAUNCHER_INSET = { top: "top-5", bottom: "bottom-5", left: "left-5", right: "right-5" } as const;
 
 export function WidgetPreview({ config }: { config: WidgetConfig }) {
   const [open, setOpen] = useState(true);
@@ -13,73 +19,85 @@ export function WidgetPreview({ config }: { config: WidgetConfig }) {
   const header = config.header_text.trim() || DEFAULT_WIDGET_CONFIG.header_text;
 
   return (
-    <GlassPanel
-      as="section"
-      aria-labelledby="widget-preview-heading"
-      className="min-w-0 overflow-hidden"
-    >
-      <div className="border-b border-line px-4 py-3 sm:px-6">
-        <h3 id="widget-preview-heading" className="font-medium text-ink">
+    <Card as="section" aria-labelledby="widget-preview-heading" className="min-w-0 overflow-hidden">
+      <div className="flex flex-col gap-1 border-b border-line px-5 py-4 sm:px-6">
+        <h3 id="widget-preview-heading" className="text-base font-medium text-ink">
           Live preview
         </h3>
-        <p className="mt-1 text-sm text-ink-muted">
-          Toggle the chat button to try the opening animation.
-        </p>
+        <p className="text-sm text-ink-muted">Toggle the chat button to try the opening animation.</p>
       </div>
-      <div className={cn("surface-widget relative h-96 overflow-hidden bg-canvas", styles.stage)}>
+      <div className="p-4 sm:p-5">
+        {/* A light "customer site": always the widget's fixed look, whatever the dashboard theme. */}
         <div
-          className={cn(
-            "absolute inset-x-3 flex gap-3 sm:inset-x-5",
-            top ? "top-4 flex-col" : "bottom-4 flex-col-reverse",
-            left ? "items-start" : "items-end",
-          )}
+          data-testid="preview-frame"
+          className="surface-widget overflow-hidden rounded-lg border border-line bg-canvas shadow-sm"
         >
-          <button
-            type="button"
-            aria-expanded={open}
-            aria-controls={open ? panelId : undefined}
-            className="ph-no-capture min-h-12 max-w-full rounded-full px-5 py-2 text-sm font-semibold wrap-anywhere text-white shadow-glass-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
-            style={{ backgroundColor: config.button_color }}
-            onClick={() => setOpen((current) => !current)}
-          >
-            {label}
-          </button>
-          {open ? (
+          <div aria-hidden="true" className="flex items-center gap-3 border-b border-line bg-card px-3 py-2">
+            <span className="flex gap-1.5">
+              <span className="size-2.5 rounded-full bg-wash-strong" />
+              <span className="size-2.5 rounded-full bg-wash-strong" />
+              <span className="size-2.5 rounded-full bg-wash-strong" />
+            </span>
+            <span className="h-5 flex-1 rounded-sm bg-wash" />
+          </div>
+          <div className={cn("relative h-[26rem] overflow-hidden", styles.stage)}>
+            <div aria-hidden="true" className="flex flex-col gap-3 p-6 sm:p-8">
+              <span className="h-4 w-2/5 rounded-sm bg-wash-strong" />
+              <span className="h-2.5 w-4/5 rounded-sm bg-wash" />
+              <span className="h-2.5 w-3/5 rounded-sm bg-wash" />
+              <span className="mt-4 h-20 w-full rounded-md bg-wash" />
+            </div>
             <div
-              id={panelId}
-              key={config.animation}
-              data-animation={config.animation}
+              data-testid="launcher-anchor"
               className={cn(
-                "flex h-60 w-full max-w-80 flex-col overflow-hidden rounded-lg border border-line bg-glass-strong shadow-glass-lg",
-                styles.panel,
+                "absolute flex max-w-[calc(100%-2.5rem)] gap-3",
+                top ? cn(LAUNCHER_INSET.top, "flex-col") : cn(LAUNCHER_INSET.bottom, "flex-col-reverse"),
+                left ? cn(LAUNCHER_INSET.left, "items-start") : cn(LAUNCHER_INSET.right, "items-end"),
               )}
-              style={{ transformOrigin: config.position.replace("-", " ") }}
             >
-              <div className="flex items-center gap-3 border-b border-line px-4 py-3">
-                <span aria-hidden="true" className="size-2.5 shrink-0 rounded-sm bg-ink" />
-                <p className="ph-no-capture text-sm font-semibold wrap-anywhere text-ink">
-                  {header}
-                </p>
-              </div>
-              <p className="m-auto px-4 text-center text-sm text-ink-muted">
-                Ask a question and we&apos;ll answer right away.
-              </p>
-              <div
-                aria-hidden="true"
-                className="flex items-center gap-2 border-t border-line px-3 py-2 text-xs"
+              <button
+                type="button"
+                aria-expanded={open}
+                aria-controls={open ? panelId : undefined}
+                className="ph-no-capture min-h-12 max-w-full rounded-full px-5 py-2 text-sm font-semibold wrap-anywhere text-white shadow-glass-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+                style={{ backgroundColor: config.button_color }}
+                onClick={() => setOpen((current) => !current)}
               >
-                <span className="min-w-0 flex-1 rounded-md border border-line bg-wash px-2 py-2 text-ink-muted">
-                  Ask a question…
-                </span>
-                <span className="rounded-md bg-accent px-3 py-2 text-accent-ink">Send</span>
-              </div>
-              {config.show_badge ? (
-                <p className="pb-2 text-center text-xs text-ink-muted">Powered by {APP_NAME}</p>
+                {label}
+              </button>
+              {open ? (
+                <div
+                  id={panelId}
+                  key={config.animation}
+                  data-animation={config.animation}
+                  className={cn(
+                    "flex h-64 w-72 max-w-full flex-col overflow-hidden rounded-lg border border-line bg-glass-strong shadow-glass-lg",
+                    styles.panel,
+                  )}
+                  style={{ transformOrigin: config.position.replace("-", " ") }}
+                >
+                  <div className="flex items-center gap-3 border-b border-line px-4 py-3">
+                    <span aria-hidden="true" className="size-2.5 shrink-0 rounded-sm bg-ink" />
+                    <p className="ph-no-capture text-sm font-semibold wrap-anywhere text-ink">{header}</p>
+                  </div>
+                  <p className="m-auto px-4 text-center text-sm text-ink-muted">
+                    Ask a question and we&apos;ll answer right away.
+                  </p>
+                  <div aria-hidden="true" className="flex items-center gap-2 border-t border-line px-3 py-2 text-xs">
+                    <span className="min-w-0 flex-1 rounded-md border border-line bg-wash px-2 py-2 text-ink-muted">
+                      Ask a question…
+                    </span>
+                    <span className="rounded-md bg-accent px-3 py-2 text-accent-ink">Send</span>
+                  </div>
+                  {config.show_badge ? (
+                    <p className="pb-2 text-center text-xs text-ink-muted">Powered by {APP_NAME}</p>
+                  ) : null}
+                </div>
               ) : null}
             </div>
-          ) : null}
+          </div>
         </div>
       </div>
-    </GlassPanel>
+    </Card>
   );
 }
