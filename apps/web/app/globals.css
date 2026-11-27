@@ -9,7 +9,8 @@
  *   - `:root` (no class) and `.light`: the light "paper" set. Also what renders without JS.
  *   - `.dark` on <html>, or `.theme-dark` on any element (the landing page is always dark).
  *   - `[data-surface="embed"]` on <html>: the widget panel at /embed. It keeps its own fixed
- *     look and never follows the owner's theme.
+ *     look and never follows the owner's theme. `.surface-widget` applies the same look to an
+ *     element (e.g. the Customize live preview).
  */
 
 /* Raw palette. `static` keeps the variables even when no class uses them. */
@@ -170,8 +171,12 @@
   color-scheme: dark;
 }
 
-/* The /embed widget panel: its fixed monochrome look, whatever the owner's theme. */
-:root[data-surface="embed"] {
+/*
+ * The widget panel's fixed monochrome look, whatever the owner's theme: /embed itself, and
+ * `.surface-widget` for anything that must look exactly like it (e.g. a live preview).
+ */
+:root[data-surface="embed"],
+.surface-widget {
   --canvas: var(--color-grey-100);
   --card: var(--color-white);
   --ink: var(--color-grey-950);
@@ -216,7 +221,7 @@
   :root[data-surface="embed"],
   :root[data-surface="embed"] body {
     font-family:
-      ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji",
-      "Segoe UI Symbol", "Noto Color Emoji";
+      -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", "Noto Sans", Arial,
+      sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
   }
 }
