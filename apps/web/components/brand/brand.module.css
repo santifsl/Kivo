@@ -67,13 +67,10 @@
   display: block;
 }
 
+/* No fill here: the far and mid ridges are filled by gradients in hero-art.tsx, and a CSS
+   fill would override that presentation attribute. */
 .ridgeFar {
-  fill: #434345;
   opacity: 0.55;
-}
-
-.ridgeMid {
-  fill: #2a2a2d;
 }
 
 .ridgeNear {
@@ -102,9 +99,17 @@
 
 .edge {
   fill: none;
-  stroke-width: 2.5;
   stroke-linejoin: round;
   opacity: 0.85;
+}
+
+/* Soft, blurred rim under the crisp line. */
+.edgeGlow {
+  stroke-width: 2.5;
+}
+
+.edgeLine {
+  stroke-width: 1.2;
 }
 
 .glow {

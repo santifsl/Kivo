@@ -94,8 +94,13 @@ export function HeroArt({ className }: { className?: string }) {
           <rect x="200" y="0" width="1600" height="1100" fill={ref("glow")} />
         </g>
         <path d={FAR} fill={ref("far")} className={styles.ridgeFar} />
-        <path d={FAR_EDGE} className={styles.edge} stroke={ref("edge")} filter={ref("soft")} />
-        <path d={FAR_EDGE} className={styles.edge} stroke={ref("edge")} strokeWidth="1.2" />
+        <path
+          d={FAR_EDGE}
+          className={`${styles.edge} ${styles.edgeGlow}`}
+          stroke={ref("edge")}
+          filter={ref("soft")}
+        />
+        <path d={FAR_EDGE} className={`${styles.edge} ${styles.edgeLine}`} stroke={ref("edge")} />
         <path d={MID} fill={ref("mid")} />
         <path d={NEAR} className={styles.ridgeNear} />
         <path d={FRONT} className={styles.ridgeFront} />
