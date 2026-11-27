@@ -5,7 +5,9 @@ import {
   THEME_STORAGE_KEY,
   applyTheme,
   isUnthemedPath,
+  forgetUnsavedChoice,
   parseThemeChoice,
+  readThemeChoice,
   resolveTheme,
   setThemeChoice,
 } from "./theme";
@@ -135,20 +137,26 @@ describe("ThemeSwitchView", () => {
   const html = (value: "light" | "dark" | "system") =>
     renderToStaticMarkup(<ThemeSwitchView value={value} onChange={() => {}} />);
 
-  it("is a radio group with Light, Dark and System, each with an icon", () => {
+  it("is a labelled group of native radios (arrow keys, one tab stop), each with an icon", () => {
     const out = html("system");
-    expect(out).toContain('role="radiogroup"');
-    expect(out).toContain('aria-label="Theme"');
+    expect(out).toMatch(/^<fieldset /);
+    expect(out).toMatch(/<legend[^>]*>Theme<\/legend>/);
+    const radios = out.match(/<input [^>]*type="radio"[^>]*>/g) ?? [];
+    expect(radios).toHaveLength(3);
+    const names = new Set(radios.map((r) => /name="([^"]+)"/.exec(r)?.[1]));
+    expect(names.size).toBe(1); // one group: the browser moves between them with arrow keys
     for (const label of ["Light", "Dark", "System"]) {
-      expect(out).toMatch(new RegExp(`role="radio"[^>]*aria-label="${label}"`));
+      expect(out).toMatch(new RegExp(`type="radio"[^>]*aria-label="${label}"`));
     }
     expect(out.match(/<svg/g)).toHaveLength(3);
   });
 
   it.each(["light", "dark", "system"] as const)("checks only %s", (value) => {
     const out = html(value);
-    expect(out.match(/aria-checked="true"/g)).toHaveLength(1);
-    expect(out).toMatch(new RegExp(`aria-checked="true"[^>]*data-theme-option="${value}"`));
+    expect(out.match(/checked=""/g)).toHaveLength(1);
+    const checked = (out.match(/<input [^>]*>/g) ?? []).filter((tag) => tag.includes('checked=""'));
+    expect(checked).toHaveLength(1);
+    expect(checked[0]).toContain(`value="${value}"`);
   });
 });
 
@@ -186,6 +194,25 @@ describe("setThemeChoice (what ThemeSwitch calls)", () => {
     const { root } = page("/dashboard", true);
     setThemeChoice("system");
     expect(themeClass(root)).toEqual(["dark"]);
+  });
+
+  it("blocked storage: the choice is kept in memory, so the switch and page follow it", () => {
+    const { root } = page();
+    const blocked = () => {
+      throw new Error("blocked");
+    };
+    (window as unknown as { localStorage: object }).localStorage = {
+      getItem: blocked,
+      setItem: blocked,
+    };
+    setThemeChoice("dark");
+    expect(readThemeChoice()).toBe("dark");
+    expect(themeClass(root)).toEqual(["dark"]);
+    setThemeChoice("light");
+    expect(readThemeChoice()).toBe("light");
+    expect(themeClass(root)).toEqual(["light"]);
+    forgetUnsavedChoice();
+    expect(readThemeChoice()).toBe("system");
   });
 
   it("never themes /embed", () => {

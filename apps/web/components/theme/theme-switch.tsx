@@ -1,7 +1,7 @@
 "use client";
 
 import { type LucideIcon, Monitor, Moon, Sun } from "lucide-react";
-import { useSyncExternalStore } from "react";
+import { useId, useSyncExternalStore } from "react";
 import { cn } from "../ui/cn";
 import {
   DEFAULT_THEME,
@@ -28,40 +28,47 @@ export type ThemeSwitchViewProps = {
   className?: string;
 };
 
-/** The three-option segmented control, drawn from props (testable without a browser). */
+/**
+ * The three-option segmented control, drawn from props (testable without a browser).
+ * Native radio inputs: one tab stop, arrow keys move and select, as screen readers expect.
+ */
 export function ThemeSwitchView({ value, onChange, className }: ThemeSwitchViewProps) {
+  const name = useId();
   return (
-    <div
-      role="radiogroup"
-      aria-label="Theme"
+    <fieldset
       className={cn(
-        "inline-flex items-center gap-0.5 rounded-full border border-line bg-wash p-0.5",
+        "m-0 inline-flex min-w-0 items-center gap-0.5 rounded-full border border-line bg-wash p-0.5",
         className,
       )}
     >
+      <legend className="sr-only">Theme</legend>
       {OPTIONS.map(({ value: option, label, icon: Icon }) => {
         const checked = option === value;
         return (
-          <button
+          <label
             key={option}
-            type="button"
-            role="radio"
-            aria-checked={checked}
-            aria-label={label}
             title={label}
             data-theme-option={option}
-            onClick={() => onChange(option)}
             className={cn(
-              "inline-flex size-8 items-center justify-center rounded-full transition-colors",
-              "focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-brand",
+              "inline-flex size-8 cursor-pointer items-center justify-center rounded-full transition-colors",
+              "has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-1 has-[:focus-visible]:outline-brand",
               checked ? "bg-card text-ink shadow-sm" : "text-ink-muted hover:text-ink",
             )}
           >
+            <input
+              type="radio"
+              name={name}
+              value={option}
+              checked={checked}
+              aria-label={label}
+              onChange={() => onChange(option)}
+              className="sr-only"
+            />
             <Icon aria-hidden="true" className="size-4" strokeWidth={1.75} />
-          </button>
+          </label>
         );
       })}
-    </div>
+    </fieldset>
   );
 }
 

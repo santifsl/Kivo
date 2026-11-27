@@ -43,12 +43,24 @@ export function applyTheme(root: HTMLElement, theme: ResolvedTheme): void {
   root.style.colorScheme = theme;
 }
 
+/**
+ * The latest choice made in this tab when it couldn't be saved (storage blocked or full), so the
+ * switch and the page still follow it until reload. Cleared when another tab saves a choice.
+ */
+let unsavedChoice: ThemeChoice | null = null;
+
 export function readThemeChoice(): ThemeChoice {
+  if (unsavedChoice) return unsavedChoice;
   try {
     return parseThemeChoice(window.localStorage.getItem(THEME_STORAGE_KEY));
   } catch {
     return DEFAULT_THEME; // Storage blocked (private mode, sandboxed frame).
   }
+}
+
+/** Another tab saved a choice: storage is the source of truth again. */
+export function forgetUnsavedChoice(): void {
+  unsavedChoice = null;
 }
 
 export function systemPrefersDark(): boolean {
@@ -65,8 +77,9 @@ export function syncTheme(): void {
 export function setThemeChoice(choice: ThemeChoice): void {
   try {
     window.localStorage.setItem(THEME_STORAGE_KEY, choice);
+    unsavedChoice = null;
   } catch {
-    // Not saved, but still applied for this page.
+    unsavedChoice = choice; // Not saved: kept in memory so this page still follows it.
   }
   syncTheme();
   window.dispatchEvent(new Event(THEME_CHANGE_EVENT));

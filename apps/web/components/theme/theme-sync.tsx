@@ -1,7 +1,13 @@
 "use client";
 
 import { useEffect } from "react";
-import { DARK_QUERY, THEME_CHANGE_EVENT, THEME_STORAGE_KEY, syncTheme } from "./theme";
+import {
+  DARK_QUERY,
+  THEME_CHANGE_EVENT,
+  THEME_STORAGE_KEY,
+  forgetUnsavedChoice,
+  syncTheme,
+} from "./theme";
 
 /**
  * Keeps <html> on the right theme after the first paint: when the OS switches
@@ -13,6 +19,7 @@ export function ThemeSync() {
     const media = window.matchMedia(DARK_QUERY);
     const onStorage = (event: StorageEvent) => {
       if (event.key === null || event.key === THEME_STORAGE_KEY) {
+        forgetUnsavedChoice();
         syncTheme();
         window.dispatchEvent(new Event(THEME_CHANGE_EVENT));
       }

@@ -26,7 +26,7 @@ export function WidgetPreview({ config }: { config: WidgetConfig }) {
           Toggle the chat button to try the opening animation.
         </p>
       </div>
-      <div className={cn("relative h-96 overflow-hidden bg-canvas", styles.stage)}>
+      <div className={cn("surface-widget relative h-96 overflow-hidden bg-canvas", styles.stage)}>
         <div
           className={cn(
             "absolute inset-x-3 flex gap-3 sm:inset-x-5",
