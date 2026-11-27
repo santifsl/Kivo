@@ -1,6 +1,9 @@
 import { Inter } from "next/font/google";
 import { APP_NAME } from "@kivo/shared";
 import styles from "./brand.module.css";
+import { K_PATHS, K_TILE_RADIUS, K_TILE_TRANSFORM } from "./k-mark";
+
+export { K_PATHS };
 
 // The wordmark is Inter semibold. Loaded here so the logo looks right on every page,
 // whatever fonts the page's layout loads.
@@ -8,19 +11,7 @@ const inter = Inter({ subsets: ["latin"], weight: "600", display: "swap" });
 
 export type BrandTone = "ink" | "paper";
 
-/**
- * The K, drawn on a 32×32 grid: a solid stem, and two arms that stop short of it
- * with an angled cut. Shared by the mark, the app tile and app/icon.svg.
- */
-export const K_PATHS = [
-  // Stem
-  "M6 4h6.2v24H6z",
-  // Both arms as one shape: the upper arm runs to the top right, the lower arm leaves its
-  // inner edge for the baseline, and both stop at a vertical cut 1.4 units off the stem.
-  "M13.6 14.56 21 4h7.6l-11.5 16.41 11.15 7.59h-8l-6.65-4.53z",
-] as const;
-
-const TONE_CLASS: Record<BrandTone, string> = {
+const TONE_CLASS: Record<BrandTone, string | undefined> = {
   ink: styles.toneInk,
   paper: styles.tonePaper,
 };
@@ -75,9 +66,9 @@ export function KivoAppMark({ size = 32, tone = "ink", className, decorative }: 
       className={[styles.mark, className].filter(Boolean).join(" ")}
       data-tone={tone}
     >
-      <rect width="32" height="32" rx="7.5" className={tile} />
+      <rect width="32" height="32" rx={K_TILE_RADIUS} className={tile} />
       {/* Scale the K into the tile with even padding. */}
-      <g transform="translate(4.44 5.2) scale(0.675)" className={glyph}>
+      <g transform={K_TILE_TRANSFORM} className={glyph}>
         {K_PATHS.map((d) => (
           <path key={d} d={d} />
         ))}
