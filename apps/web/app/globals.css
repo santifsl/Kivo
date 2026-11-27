@@ -1,18 +1,42 @@
 @import "tailwindcss";
 
 /*
- * Design tokens (project.md §13). The only place colors, radii, shadows and blur are defined.
- * Tailwind's default palette, radii, shadows and blur are removed, so an ad-hoc class like
- * `bg-red-500` or `shadow-xl` does not exist. Use the semantic tokens below.
+ * Design tokens (project.md §13). The only place colors, radii, shadows, blur and fonts are
+ * defined. Tailwind's default palette, radii, shadows and blur are removed, so an ad-hoc class
+ * like `bg-red-500` or `shadow-xl` does not exist. Use the semantic tokens below.
  *
- * Light (dashboard) is the default. Wrap a page in `.theme-dark` for the dark set (landing).
+ * Themes, set on <html> before paint by components/theme/theme-script.ts:
+ *   - `:root` (no class) and `.light`: the light "paper" set. Also what renders without JS.
+ *   - `.dark` on <html>, or `.theme-dark` on any element (the landing page is always dark).
+ *   - `[data-surface="embed"]` on <html>: the widget panel at /embed. It keeps its own fixed
+ *     look and never follows the owner's theme.
  */
 
-/* Raw monochrome palette. `static` keeps the variables even when no class uses them. */
+/* Raw palette. `static` keeps the variables even when no class uses them. */
 @theme static {
   --color-*: initial;
   --color-white: #ffffff;
   --color-black: #000000;
+
+  /* Brand palette (PO-picked, exact). */
+  --color-ink-950: #0b0b0c; /* Ink: dark canvas, light-mode text */
+  --color-paper: #f7f7f6; /* Paper: light canvas, dark-mode text */
+  --color-graphite: #2a2a2d; /* dark cards, raised surfaces */
+  --color-graphite-line: #434345; /* dark borders, secondary */
+  --color-stone: #b6b6b8; /* muted text on dark, hairlines on light */
+  --color-terracotta: #c96a3f; /* the only accent. 3.5:1 on paper, 5.3:1 on ink: fine for rings, bars and large headline text, not body text */
+
+  /* Derived from the brand palette, for contrast (WCAG AA for text). */
+  --color-ink-600: #5c5c60; /* muted text: 6.2:1 on paper, 6.7:1 on white */
+  --color-ink-500: #6e6e72; /* subtle text: 4.7:1 on paper, 5.1:1 on white */
+  --color-stone-600: #96969a; /* subtle text: 6.7:1 on ink, 4.9:1 on graphite */
+  --color-graphite-hover: #e4e4e2; /* primary button hover in dark */
+  --color-green-700: #146c34; /* success on light: 5.3:1 on its soft pill */
+  --color-green-400: #4fc987; /* success on dark: 5.2:1 on its soft pill over graphite */
+  --color-red-700: #b42318; /* danger on light: 6.6:1 on white */
+  --color-red-400: #f97066; /* danger on dark: 5.1:1 on graphite */
+
+  /* Legacy monochrome greys: the /embed panel's fixed look. */
   --color-grey-50: #fafafa;
   --color-grey-100: #f5f5f5;
   --color-grey-200: #e5e5e5;
@@ -28,42 +52,133 @@
   --radius-*: initial;
   --radius-sm: 0.375rem;
   --radius-md: 0.625rem;
-  --radius-lg: 1rem;
+  --radius-lg: 1rem; /* cards */
   --radius-xl: 1.5rem;
 
   --blur-*: initial;
   --blur-sm: 8px;
   --blur-glass: 20px;
+
+  /* Type: display headlines and the eyebrow label. */
+  --leading-display: 1.05;
+  --tracking-display: -0.02em;
+  --tracking-eyebrow: 0.12em;
 }
 
-/* Semantic tokens: utilities read the variable at use time, so `.theme-dark` can switch them. */
+/* Semantic tokens: utilities read the variable at use time, so the theme can switch them. */
 @theme inline {
   --color-canvas: var(--canvas); /* page background */
+  --color-card: var(--card); /* cards, inputs, drawers */
   --color-ink: var(--ink); /* primary text */
   --color-ink-muted: var(--ink-muted); /* secondary text */
   --color-ink-subtle: var(--ink-subtle); /* hints, placeholders */
   --color-line: var(--line); /* borders, dividers */
+  --color-line-strong: var(--line-strong); /* input borders */
   --color-glass: var(--glass); /* translucent panel */
-  --color-glass-strong: var(--glass-strong); /* near-opaque, for menus over content (a nested panel gets no blur) */
-  --color-accent: var(--accent); /* primary button */
+  --color-glass-strong: var(
+    --glass-strong
+  ); /* near-opaque, for menus over content (a nested panel gets no blur) */
+  --color-accent: var(--accent); /* primary button: ink on paper, paper on ink */
   --color-accent-hover: var(--accent-hover);
   --color-accent-ink: var(--accent-ink); /* text on accent */
-  --color-wash: var(--wash); /* secondary button, active nav */
+  --color-brand: var(
+    --brand
+  ); /* terracotta: italic phrase, eyebrow dash, bars, focus, active nav. Never big fills or body text */
+  --color-success: var(--success); /* "Active" pill text and dot, "Online" dot */
+  --color-success-soft: var(--success-soft); /* "Active" pill background */
+  --color-danger: var(--danger); /* errors, destructive actions */
+  --color-wash: var(--wash); /* hover, active nav */
   --color-wash-strong: var(--wash-strong); /* hover on wash */
   --color-skeleton: var(--skeleton); /* loading placeholders */
 
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-instrument-serif), ui-serif, Georgia, serif;
+
   --shadow-*: initial;
   --shadow-sm: var(--shadow-sm-value);
+  --shadow-card: var(--shadow-card-value);
   --shadow-glass: var(--shadow-glass-value);
   --shadow-glass-lg: var(--shadow-glass-lg-value);
 }
 
-:root {
+/* Dark mode for `dark:` utilities: the dark theme on <html>, or inside `.theme-dark`. */
+@custom-variant dark (&:where(.dark, .dark *, .theme-dark, .theme-dark *));
+
+/* Light "paper" (default). */
+:root,
+.light {
+  --canvas: var(--color-paper);
+  --card: var(--color-white);
+  --ink: var(--color-ink-950);
+  --ink-muted: var(--color-ink-600);
+  --ink-subtle: var(--color-ink-500);
+  --line: rgb(182 182 184 / 0.5); /* Stone hairline */
+  --line-strong: var(--color-stone);
+  --glass: rgb(255 255 255 / 0.82);
+  --glass-strong: rgb(255 255 255 / 0.97);
+  --accent: var(--color-ink-950);
+  --accent-hover: var(--color-graphite);
+  --accent-ink: var(--color-paper);
+  --brand: var(--color-terracotta);
+  --success: var(--color-green-700);
+  --success-soft: rgb(20 108 52 / 0.1);
+  --danger: var(--color-red-700);
+  --wash: rgb(11 11 12 / 0.04);
+  --wash-strong: rgb(11 11 12 / 0.08);
+  --skeleton: rgb(11 11 12 / 0.07);
+  --glow-1: rgb(255 255 255 / 0.9);
+  --glow-2: rgb(11 11 12 / 0.04);
+
+  --shadow-sm-value: 0 1px 2px rgb(11 11 12 / 0.05);
+  --shadow-card-value: 0 1px 2px rgb(11 11 12 / 0.04), 0 8px 24px rgb(11 11 12 / 0.05);
+  --shadow-glass-value: inset 0 1px 0 rgb(255 255 255 / 0.7), 0 8px 32px rgb(11 11 12 / 0.06);
+  --shadow-glass-lg-value: inset 0 1px 0 rgb(255 255 255 / 0.7), 0 16px 48px rgb(11 11 12 / 0.12);
+
+  color-scheme: light;
+}
+
+/* Dark: the owner's choice on <html>, and the landing page always. */
+:root.dark,
+.theme-dark {
+  --canvas: var(--color-ink-950);
+  --card: var(--color-graphite);
+  --ink: var(--color-paper);
+  --ink-muted: var(--color-stone);
+  --ink-subtle: var(--color-stone-600);
+  --line: var(--color-graphite-line);
+  --line-strong: var(--color-stone-600);
+  --glass: rgb(42 42 45 / 0.72); /* Graphite */
+  --glass-strong: rgb(42 42 45 / 0.97);
+  --accent: var(--color-paper);
+  --accent-hover: var(--color-graphite-hover);
+  --accent-ink: var(--color-ink-950);
+  --brand: var(--color-terracotta);
+  --success: var(--color-green-400);
+  --success-soft: rgb(79 201 135 / 0.14);
+  --danger: var(--color-red-400);
+  --wash: rgb(247 247 246 / 0.06);
+  --wash-strong: rgb(247 247 246 / 0.12);
+  --skeleton: rgb(247 247 246 / 0.08);
+  --glow-1: rgb(247 247 246 / 0.05);
+  --glow-2: rgb(201 106 63 / 0.05);
+
+  --shadow-sm-value: 0 1px 2px rgb(0 0 0 / 0.4);
+  --shadow-card-value: 0 0 0 0 transparent;
+  --shadow-glass-value: inset 0 1px 0 rgb(247 247 246 / 0.06), 0 8px 32px rgb(0 0 0 / 0.4);
+  --shadow-glass-lg-value: inset 0 1px 0 rgb(247 247 246 / 0.06), 0 16px 48px rgb(0 0 0 / 0.6);
+
+  color-scheme: dark;
+}
+
+/* The /embed widget panel: its fixed monochrome look, whatever the owner's theme. */
+:root[data-surface="embed"] {
   --canvas: var(--color-grey-100);
+  --card: var(--color-white);
   --ink: var(--color-grey-950);
   --ink-muted: var(--color-grey-600);
   --ink-subtle: var(--color-grey-500);
   --line: rgb(0 0 0 / 0.08);
+  --line-strong: var(--color-grey-300);
   --glass: rgb(255 255 255 / 0.6);
   --glass-strong: rgb(255 255 255 / 0.96);
   --accent: var(--color-grey-950);
@@ -82,30 +197,6 @@
   color-scheme: light;
 }
 
-.theme-dark {
-  --canvas: var(--color-black);
-  --ink: var(--color-grey-50);
-  --ink-muted: var(--color-grey-400);
-  --ink-subtle: var(--color-grey-500);
-  --line: rgb(255 255 255 / 0.1);
-  --glass: rgb(255 255 255 / 0.06);
-  --glass-strong: rgb(23 23 23 / 0.96);
-  --accent: var(--color-white);
-  --accent-hover: var(--color-grey-200);
-  --accent-ink: var(--color-black);
-  --wash: rgb(255 255 255 / 0.06);
-  --wash-strong: rgb(255 255 255 / 0.12);
-  --skeleton: rgb(255 255 255 / 0.08);
-  --glow-1: rgb(255 255 255 / 0.08);
-  --glow-2: rgb(255 255 255 / 0.04);
-
-  --shadow-sm-value: 0 1px 2px rgb(0 0 0 / 0.4);
-  --shadow-glass-value: inset 0 1px 0 rgb(255 255 255 / 0.08), 0 8px 32px rgb(0 0 0 / 0.4);
-  --shadow-glass-lg-value: inset 0 1px 0 rgb(255 255 255 / 0.08), 0 16px 48px rgb(0 0 0 / 0.6);
-
-  color-scheme: dark;
-}
-
 /* Soft light spots behind glass panels, so the blur has something to show. */
 @utility bg-glow {
   background-color: var(--canvas);
@@ -119,5 +210,13 @@
   body {
     background-color: var(--canvas);
     color: var(--ink);
+  }
+
+  /* The widget panel keeps the system font stack it always had (no brand fonts). */
+  :root[data-surface="embed"],
+  :root[data-surface="embed"] body {
+    font-family:
+      ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji",
+      "Segoe UI Symbol", "Noto Color Emoji";
   }
 }

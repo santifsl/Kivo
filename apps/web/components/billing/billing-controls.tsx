@@ -6,7 +6,7 @@ import { Button } from "../ui/button";
 import { ErrorState } from "../ui/error-state";
 import { GlassPanel } from "../ui/glass-panel";
 import { LoadingState } from "../ui/loading-state";
-import { useClerkAppearance } from "./clerk-appearance";
+import { useClerkAppearance } from "../auth/clerk-appearance";
 
 const loadingPlans = <LoadingState label="Loading subscription plans…" rows={2} />;
 

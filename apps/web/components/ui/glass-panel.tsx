@@ -27,7 +27,11 @@ export function GlassPanel<T extends GlassElement = "div">({
   return (
     <Element
       data-surface={surface}
-      className={cn("rounded-lg border border-line backdrop-blur-glass", SURFACE_CLASSES[surface], className)}
+      className={cn(
+        "rounded-lg border border-line backdrop-blur-glass",
+        SURFACE_CLASSES[surface],
+        className,
+      )}
       {...props}
     />
   );

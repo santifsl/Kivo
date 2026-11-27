@@ -1,7 +1,13 @@
 import { renderToStaticMarkup } from "react-dom/server";
+import { FolderOpen } from "lucide-react";
 import { describe, expect, it } from "vitest";
+import { Badge } from "./badge";
 import { Button } from "./button";
+import { Card } from "./card";
 import { EmptyState } from "./empty-state";
+import { Eyebrow } from "./eyebrow";
+import { Input, Textarea } from "./input";
+import { StatCard } from "./stat-card";
 import { ErrorState } from "./error-state";
 import { GlassPanel } from "./glass-panel";
 import { LoadingState } from "./loading-state";
@@ -12,7 +18,11 @@ const DISABLED_ATTR = / disabled=""/;
 
 describe("GlassPanel", () => {
   it("renders a glass surface from the tokens, as the requested element", () => {
-    const out = html(<GlassPanel as="section" className="p-4">hi</GlassPanel>);
+    const out = html(
+      <GlassPanel as="section" className="p-4">
+        hi
+      </GlassPanel>,
+    );
     expect(out).toMatch(/^<section /);
     for (const token of ["bg-glass", "backdrop-blur-glass", "shadow-glass", "border-line", "p-4"]) {
       expect(out).toContain(token);
@@ -53,11 +63,123 @@ describe("Button", () => {
     expect(out).toMatch(DISABLED_ATTR);
     expect(out).not.toContain("button-spinner");
   });
+
+  it.each(["primary", "secondary", "ghost"] as const)(
+    "%s disabled keeps its shape: 40%% opacity and a not-allowed cursor, no hover change",
+    (variant) => {
+      const out = html(
+        <Button variant={variant} disabled>
+          Go
+        </Button>,
+      );
+      expect(out).toContain("rounded-full");
+      expect(out).toContain("disabled:opacity-40");
+      expect(out).toContain("disabled:cursor-not-allowed");
+      // Hover styles only apply when enabled; no pointer-events-none (it would hide the cursor).
+      expect(out).not.toMatch(/(?<!enabled:)hover:bg-/);
+      expect(out).not.toContain("pointer-events-none");
+    },
+  );
+
+  it("primary is ink/paper (the accent token), never terracotta", () => {
+    const out = html(<Button>Go</Button>);
+    expect(out).toContain("bg-accent");
+    expect(out).toContain("text-accent-ink");
+    expect(out).not.toContain("bg-brand");
+  });
+
+  it("secondary is an outline pill", () => {
+    const out = html(<Button variant="secondary">Go</Button>);
+    expect(out).toContain("border-line-strong");
+    expect(out).toContain("bg-transparent");
+  });
+
+  it("focus ring is terracotta", () => {
+    expect(html(<Button>Go</Button>)).toContain("focus-visible:outline-brand");
+  });
+
+  it("arrow adds a trailing ↗ icon after the label", () => {
+    const out = html(<Button arrow>Open</Button>);
+    expect(out).toMatch(/Open<svg[^>]*data-testid="button-arrow"/);
+    expect(html(<Button>Open</Button>)).not.toContain("button-arrow");
+  });
+});
+
+describe("Badge", () => {
+  it("neutral by default, no dot", () => {
+    const out = html(<Badge>Free</Badge>);
+    expect(out).toContain('data-variant="neutral"');
+    expect(out).not.toContain("badge-dot");
+  });
+
+  it("success has a green dot and green text on a soft green pill", () => {
+    const out = html(<Badge variant="success">Active</Badge>);
+    expect(out).toContain('data-variant="success"');
+    expect(out).toMatch(
+      /data-testid="badge-dot"[^>]*bg-success|bg-success[^>]*data-testid="badge-dot"/,
+    );
+    expect(out).toContain("text-success");
+    expect(out).toContain("bg-success-soft");
+    expect(out).toMatch(/Active<\/span>$/);
+  });
+});
+
+describe("Card", () => {
+  it("is a 16px-radius card with a line and the card shadow, as the requested element", () => {
+    const out = html(
+      <Card as="section" className="p-6">
+        x
+      </Card>,
+    );
+    expect(out).toMatch(/^<section /);
+    for (const token of ["rounded-lg", "border-line", "bg-card", "shadow-card", "p-6"]) {
+      expect(out).toContain(token);
+    }
+  });
+});
+
+describe("Input and Textarea", () => {
+  it("are rounded with a terracotta focus ring and pass props through", () => {
+    for (const out of [
+      html(<Input name="title" placeholder="Title" aria-invalid />),
+      html(<Textarea name="body" />),
+    ]) {
+      expect(out).toContain("rounded-md");
+      expect(out).toContain("focus-visible:outline-brand");
+      expect(out).toContain("aria-invalid:border-danger");
+    }
+    expect(html(<Input name="title" />)).toMatch(/^<input [^>]*name="title"/);
+    expect(html(<Textarea name="body" />)).toMatch(/^<textarea [^>]*name="body"/);
+  });
+});
+
+describe("Eyebrow", () => {
+  it("is a terracotta dash then an uppercase tracked label", () => {
+    const out = html(<Eyebrow>How it works</Eyebrow>);
+    expect(out).toMatch(
+      /data-testid="eyebrow-dash"[^>]*bg-brand|bg-brand[^>]*data-testid="eyebrow-dash"/,
+    );
+    expect(out).toContain("uppercase");
+    expect(out).toContain("tracking-eyebrow");
+    expect(out).toContain("How it works");
+  });
+});
+
+describe("StatCard", () => {
+  it("shows the label, a big serif number and optional sub-text", () => {
+    const out = html(<StatCard label="Messages" value="42" sub="of 100 this month" />);
+    expect(out).toContain("Messages");
+    expect(out).toMatch(/font-display[^>]*>42</);
+    expect(out).toContain("of 100 this month");
+    expect(html(<StatCard label="Projects" value={3} />)).not.toContain("text-ink-subtle");
+  });
 });
 
 describe("EmptyState", () => {
   it("shows title, description and action", () => {
-    const out = html(<EmptyState title="No projects yet" description="Create one" action={<Button>New</Button>} />);
+    const out = html(
+      <EmptyState title="No projects yet" description="Create one" action={<Button>New</Button>} />,
+    );
     expect(out).toContain("No projects yet");
     expect(out).toContain("Create one");
     expect(out).toContain("<button");
@@ -66,8 +188,15 @@ describe("EmptyState", () => {
   it("works with only a title", () => {
     const out = html(<EmptyState title="Nothing here" />);
     expect(out).toContain("Nothing here");
-    expect(out).not.toContain("<p");
+    expect(out).not.toMatch(/<p[ >]/);
     expect(out).not.toContain("<button");
+  });
+
+  it("renders a real icon in its tile (default inbox, or the one given)", () => {
+    const out = html(<EmptyState title="No projects yet" />);
+    expect(out).toMatch(/<svg[^>]*data-testid="empty-state-icon"/);
+    expect(out).toContain("lucide-inbox");
+    expect(html(<EmptyState title="x" icon={FolderOpen} />)).toContain("lucide-folder-open");
   });
 });
 
@@ -94,11 +223,25 @@ describe("ErrorState", () => {
 });
 
 describe("PageHeader", () => {
-  it("shows the title as h1, the description and actions", () => {
-    const out = html(<PageHeader title="Billing" description="Your plan" actions={<Button>Upgrade</Button>} />);
-    expect(out).toContain("<h1");
-    expect(out).toContain("Billing");
+  it("shows the title as a serif h1, the description and actions", () => {
+    const out = html(
+      <PageHeader title="Billing" description="Your plan" actions={<Button>Upgrade</Button>} />,
+    );
+    expect(out).toMatch(/<h1 [^>]*font-display[^>]*>Billing<\/h1>/);
     expect(out).toContain("Your plan");
     expect(out).toContain("Upgrade");
+    expect(out).not.toContain("Breadcrumb");
+  });
+
+  it("shows an optional badge next to the title and a breadcrumb above it", () => {
+    const out = html(
+      <PageHeader
+        title="Acme"
+        badge={<Badge variant="success">Active</Badge>}
+        breadcrumb={<a href="/p">Projects</a>}
+      />,
+    );
+    expect(out.indexOf("Breadcrumb")).toBeLessThan(out.indexOf("<h1"));
+    expect(out.indexOf("</h1>")).toBeLessThan(out.indexOf("Active"));
   });
 });
