@@ -41,20 +41,20 @@ The raw findings are in `report.json`.
 
 ## Remaining issues, by severity
 
-Nothing blocks launch.
+Nothing blocks launch. Overview, Customize and Billing get re-shot after URK-T10 merges.
 
 ### Medium
 
-1. **Overview throws React error #418 (hydration mismatch)** on every load, in every theme and width. The page looks right, because React re-renders it on the client, but that costs a client re-render and logs an error.
+1. **Fixing in URK-T10.** **Overview throws React error #418 (hydration mismatch)** on every load, in every theme and width. The page looks right, because React re-renders it on the client, but that costs a client re-render and logs an error.
    - Likely cause, read from the code and not confirmed in a dev build: `StatCard` renders `sub` inside a `<p>`, and Overview passes a `UsageBar` there, which is a `<div>`.
    - A `<div>` inside a `<p>` is invalid HTML, so the browser splits the paragraph and hydration fails.
    - Fix: make the `sub` wrapper a `<div>`, or render `UsageBar` with spans.
-2. **The Customize live preview still draws the old widget.** It has no avatar, no Online dot, a rectangular "Send" button and the old input, so it no longer matches the real panel (shot 16). See `1440-light-14-customize-pro.png`.
+2. **Fixing in URK-T10.** **The Customize live preview still draws the old widget.** It has no avatar, no Online dot, a rectangular "Send" button and the old input, so it no longer matches the real panel (shot 16). See `1440-light-14-customize-pro.png`.
 
 ### Low
 
-3. **Billing on Free shows "Manage subscription"** in the current-plan card (`*-13-billing-free.png`). With no subscription to manage, an upgrade action would read better.
-4. **Clerk plan copy** (set in the Clerk dashboard, not the code): Free's description is "Free kivo", in lowercase. Pro's is generic ("Unlock premium features and advanced capabilities in Kivo.").
+3. **Fixing in URK-T10.** **Billing on Free shows "Manage subscription"** in the current-plan card (`*-13-billing-free.png`). With no subscription to manage, an upgrade action would read better.
+4. **For the product owner, in the Clerk dashboard.** **Clerk plan copy** (not in the code): Free's description is "Free kivo", in lowercase. Pro's is generic ("Unlock premium features and advanced capabilities in Kivo.").
 
 ### Not issues
 
