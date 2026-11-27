@@ -1,6 +1,8 @@
 "use client";
 
+import { FileText, FileType, Loader2, type LucideIcon, Plus, TextQuote, Upload } from "lucide-react";
 import Link from "next/link";
+import { useState } from "react";
 import {
   KNOWLEDGE_TITLE_MAX_LENGTH,
   type KnowledgeSource,
@@ -8,10 +10,12 @@ import {
 } from "@kivo/shared";
 import { formatProjectDate } from "../projects/format-date";
 import { Dialog } from "../projects/dialog";
+import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
+import { Card } from "../ui/card";
 import { cn } from "../ui/cn";
 import { EmptyState } from "../ui/empty-state";
-import { GlassPanel } from "../ui/glass-panel";
+import { FIELD_CLASSES } from "../ui/input";
 import {
   BILLING_HREF,
   FAILED_MESSAGE,
@@ -38,10 +42,6 @@ export interface KnowledgeHandlers {
   onRefresh: () => void;
 }
 
-const FIELD_CLASSES =
-  "w-full min-w-0 rounded-md border border-line bg-glass-strong px-3 text-sm text-ink placeholder:text-ink-subtle " +
-  "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:opacity-50";
-
 export const PASTE_TITLE_ID = "knowledge-paste-title";
 export const PASTE_CONTENT_ID = "knowledge-paste-content";
 export const FILE_INPUT_ID = "knowledge-file";
@@ -58,16 +58,29 @@ export function KnowledgeScreen({
   const disabled = addingDisabled(state);
   return (
     <>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex min-w-0 flex-col gap-0.5">
-          <h2 className="text-lg font-semibold text-ink">Knowledge</h2>
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div className="flex min-w-0 flex-col gap-1">
+          <h2 className="font-display text-3xl leading-display tracking-display text-ink">Knowledge</h2>
           <p className="text-sm text-ink-muted" data-testid="source-count">
             {sourceCountLabel(state.plan, state.sources.length)}. Your bot answers only from these.
           </p>
         </div>
-        <Button variant="secondary" onClick={handlers.onRefresh} loading={refreshing}>
-          Refresh
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="secondary" onClick={handlers.onRefresh} loading={refreshing}>
+            Refresh
+          </Button>
+          <Button
+            disabled={disabled}
+            onClick={() => {
+              const field = document.getElementById(PASTE_TITLE_ID);
+              field?.scrollIntoView({ block: "center", behavior: "smooth" });
+              field?.focus({ preventScroll: true });
+            }}
+          >
+            Add knowledge
+            <Plus aria-hidden="true" className="size-4" strokeWidth={2} />
+          </Button>
+        </div>
       </div>
 
       {disabled ? <LimitNotice state={state} /> : null}
@@ -77,9 +90,10 @@ export function KnowledgeScreen({
         <UploadForm state={state} handlers={handlers} disabled={disabled} />
       </div>
 
-      <GlassPanel as="section" aria-label="Sources">
+      <Card as="section" aria-label="Sources" className="overflow-hidden">
         {state.sources.length === 0 ? (
           <EmptyState
+            icon={FileText}
             title="No knowledge yet"
             description="Paste text or upload a PDF, Markdown or text file. Your bot answers from it."
           />
@@ -90,7 +104,7 @@ export function KnowledgeScreen({
             ))}
           </ul>
         )}
-      </GlassPanel>
+      </Card>
 
       <DeleteDialog state={state} handlers={handlers} />
     </>
@@ -99,16 +113,16 @@ export function KnowledgeScreen({
 
 function LimitNotice({ state }: { state: KnowledgeState }) {
   return (
-    <GlassPanel as="section" aria-label="Source limit" className="p-4">
+    <Card as="section" aria-label="Source limit" className="p-4">
       <p role="status" data-testid="source-limit" className="text-sm text-ink-muted">
         {sourceLimitMessage(state.plan)}{" "}
         {state.plan === "free" ? (
-          <Link href={BILLING_HREF} className="font-medium text-ink underline underline-offset-2">
+          <Link href={BILLING_HREF} className="font-medium text-ink underline decoration-brand underline-offset-2">
             Upgrade to Pro
           </Link>
         ) : null}
       </p>
-    </GlassPanel>
+    </Card>
   );
 }
 
@@ -124,15 +138,18 @@ function PasteForm({
   const busy = state.pending === "paste";
   const empty = state.pasteTitle.trim() === "" || state.pasteContent.trim() === "";
   return (
-    <GlassPanel as="section" aria-label="Paste text" className="p-4 sm:p-6">
+    <Card as="section" aria-label="Paste text" className="p-5 sm:p-6">
       <form
-        className="flex flex-col gap-3"
+        className="flex h-full flex-col gap-3"
         onSubmit={(event) => {
           event.preventDefault();
           handlers.onPasteSubmit();
         }}
       >
-        <h3 className="text-sm font-semibold text-ink">Paste text</h3>
+        <h3 className="flex items-center gap-2 text-base font-medium text-ink">
+          <TextQuote aria-hidden="true" className="size-4 text-ink-muted" strokeWidth={1.75} />
+          Paste text
+        </h3>
         <label htmlFor={PASTE_TITLE_ID} className="text-sm font-medium text-ink">
           Title
         </label>
@@ -153,7 +170,7 @@ function PasteForm({
         <textarea
           id={PASTE_CONTENT_ID}
           name="content"
-          className={cn(FIELD_CLASSES, "min-h-40 py-2")}
+          className={cn(FIELD_CLASSES, "min-h-40 flex-1 py-2")}
           placeholder="We ship to the US and Canada…"
           maxLength={MAX_TEXT_SOURCE_LENGTH}
           value={state.pasteContent}
@@ -175,7 +192,7 @@ function PasteForm({
           </p>
         ) : null}
       </form>
-    </GlassPanel>
+    </Card>
   );
 }
 
@@ -190,27 +207,53 @@ function UploadForm({
 }) {
   const { upload } = state;
   const busy = state.pending === "upload";
+  const off = disabled || busy;
+  const [dragging, setDragging] = useState(false);
   return (
-    <GlassPanel as="section" aria-label="Upload a file" className="flex flex-col gap-3 p-4 sm:p-6">
-      <h3 className="text-sm font-semibold text-ink">Upload a file</h3>
-      <p className="text-sm text-ink-muted">PDF, Markdown (.md) or text (.txt), up to 10 MB.</p>
+    <Card as="section" aria-label="Upload a file" className="flex flex-col gap-3 p-5 sm:p-6">
+      <h3 className="flex items-center gap-2 text-base font-medium text-ink">
+        <Upload aria-hidden="true" className="size-4 text-ink-muted" strokeWidth={1.75} />
+        Upload a file
+      </h3>
+      {/* The drop zone grows to fill the card next to the paste form (no dead space). */}
       <label
         htmlFor={FILE_INPUT_ID}
-        aria-disabled={disabled || busy || undefined}
+        aria-disabled={off || undefined}
+        data-dragging={dragging || undefined}
         className={cn(
-          "flex min-h-24 cursor-pointer flex-col items-center justify-center gap-1 rounded-md border border-dashed border-line bg-wash px-4 py-6 text-center text-sm text-ink",
-          "focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-ink hover:bg-wash-strong",
-          (disabled || busy) && "pointer-events-none opacity-50",
+          "flex min-h-40 flex-1 cursor-pointer flex-col items-center justify-center gap-2 rounded-md border border-dashed border-line-strong bg-wash px-4 py-8 text-center text-sm text-ink transition-colors",
+          "focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-brand hover:bg-wash-strong",
+          dragging && "border-brand bg-wash-strong",
+          off && "pointer-events-none opacity-50",
         )}
+        onDragOver={(event) => {
+          if (off) return;
+          event.preventDefault();
+          setDragging(true);
+        }}
+        onDragLeave={() => setDragging(false)}
+        onDrop={(event) => {
+          event.preventDefault();
+          setDragging(false);
+          const file = event.dataTransfer.files[0];
+          if (!off && file) handlers.onFileChosen(file);
+        }}
       >
+        <span
+          aria-hidden="true"
+          className="flex size-10 items-center justify-center rounded-full border border-line bg-card text-ink-muted"
+        >
+          <Upload className="size-4" strokeWidth={1.75} />
+        </span>
         <span className="font-medium">Choose a file</span>
-        <span className="text-xs text-ink-muted">It uploads as soon as you pick it.</span>
+        <span className="text-xs text-ink-muted">or drop it here. It uploads as soon as you pick it.</span>
+        <span className="text-xs text-ink-subtle">PDF, Markdown (.md) or text (.txt), up to 10 MB.</span>
         <input
           id={FILE_INPUT_ID}
           type="file"
           accept={FILE_ACCEPT}
           className="sr-only"
-          disabled={disabled || busy}
+          disabled={off}
           onChange={(event) => {
             const file = event.target.files?.[0];
             // Clear it so picking the same file again fires change.
@@ -226,11 +269,11 @@ function UploadForm({
         </p>
       ) : null}
       {state.uploadError ? (
-        <p role="alert" className="text-sm text-ink">
+        <p role="alert" className="text-sm text-danger">
           {state.uploadError}
         </p>
       ) : null}
-    </GlassPanel>
+    </Card>
   );
 }
 
@@ -255,49 +298,78 @@ function UploadProgressBar({
         aria-valuenow={percent}
         className="h-1.5 overflow-hidden rounded-full bg-wash-strong"
       >
-        <div className="h-full bg-accent transition-[width]" style={{ width: `${percent}%` }} />
+        <div className="h-full bg-brand transition-[width]" style={{ width: `${percent}%` }} />
       </div>
     </div>
   );
 }
 
+const TYPE_ICONS: Record<KnowledgeSource["type"], LucideIcon> = {
+  text: TextQuote,
+  pdf: FileText,
+  md: FileType,
+  txt: FileText,
+};
+
 function StatusBadge({ source }: { source: KnowledgeSource }) {
+  const label = statusLabel(source.status);
+  if (source.status === "ready") {
+    return (
+      <Badge variant="success" data-status={source.status}>
+        {label}
+      </Badge>
+    );
+  }
+  if (source.status === "failed") {
+    return (
+      <span
+        data-status={source.status}
+        className="inline-flex h-6 items-center gap-1.5 rounded-full bg-danger/10 px-2.5 text-xs font-medium text-danger"
+      >
+        <span aria-hidden="true" className="size-1.5 rounded-full bg-danger" />
+        {label}
+      </span>
+    );
+  }
   return (
     <span
       data-status={source.status}
-      className={cn(
-        "inline-flex h-6 items-center rounded-full border px-2 text-xs font-medium",
-        source.status === "ready" && "border-accent bg-accent text-accent-ink",
-        source.status === "failed" && "border-ink bg-glass-strong text-ink",
-        (source.status === "processing" || source.status === "uploading") &&
-          "border-line bg-wash text-ink-muted",
-      )}
+      className="inline-flex h-6 items-center gap-1.5 rounded-full bg-wash-strong px-2.5 text-xs font-medium text-ink-muted"
     >
-      {statusLabel(source.status)}
+      <Loader2 aria-hidden="true" className="size-3 animate-spin motion-reduce:animate-none" strokeWidth={2} />
+      {label}
     </span>
   );
 }
 
 function SourceRow({ source, handlers }: { source: KnowledgeSource; handlers: KnowledgeHandlers }) {
+  const Icon = TYPE_ICONS[source.type];
   return (
-    <li className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-      <div className="flex min-w-0 flex-col gap-1">
-        <p className="truncate font-medium text-ink">{source.title}</p>
-        <p className="flex flex-wrap items-center gap-2 text-xs text-ink-muted">
+    <li className="flex items-start gap-3 px-4 py-4 sm:items-center sm:px-6">
+      <span
+        aria-hidden="true"
+        className="flex size-9 shrink-0 items-center justify-center rounded-md border border-line bg-wash text-ink-muted"
+      >
+        <Icon className="size-4" strokeWidth={1.75} />
+      </span>
+      <div className="flex min-w-0 flex-1 flex-col gap-1">
+        <p className="truncate text-sm font-medium text-ink">{source.title}</p>
+        <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-ink-muted">
           <StatusBadge source={source} />
           <span>{typeLabel(source.type)}</span>
           <span aria-hidden="true">·</span>
           <time dateTime={source.created_at}>{formatProjectDate(source.created_at)}</time>
         </p>
         {source.status === "failed" ? (
-          <p className="text-sm text-ink" data-testid="source-failed">
+          <p className="text-sm text-danger" data-testid="source-failed">
             {FAILED_MESSAGE}
           </p>
         ) : null}
       </div>
+      {/* Stays on the row's right edge at every width. */}
       <Button
         variant="ghost"
-        className="shrink-0 self-start sm:self-auto"
+        className="-mr-2 shrink-0"
         onClick={() => handlers.onDeleteOpen(source)}
         aria-label={`Delete ${source.title}`}
       >

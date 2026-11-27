@@ -61,6 +61,11 @@ const PLAN_LIMIT = {
   message: "Your plan's knowledge source limit is reached.",
 } as const;
 
+/** The markup of the status badge with this data-status, up to its text. */
+function badge(html: string, status: string): string {
+  return new RegExp(`<span[^>]*data-status="${status}"[\\s\\S]*?>(Ready|Processing|Failed)`).exec(html)?.[0] ?? "";
+}
+
 describe("source list", () => {
   it("lists title, type and status, in the given (newest-first) order", () => {
     const html = render(
@@ -72,15 +77,38 @@ describe("source list", () => {
     expect(html.indexOf("Returns")).toBeLessThan(html.indexOf("FAQ"));
     expect(html).toContain("PDF");
     expect(html).toContain("Markdown");
-    expect(html).toMatch(/data-status="ready"[^>]*>Ready</);
-    expect(html).toMatch(/data-status="processing"[^>]*>Processing</);
+    expect(badge(html, "ready")).toMatch(/>Ready$/);
+    expect(badge(html, "processing")).toMatch(/>Processing$/);
     expect(html).not.toContain("No knowledge yet");
+  });
+
+  it("draws Processing with a spinner, Ready as success and Failed in red", () => {
+    const html = render(
+      state([
+        source({ title: "A", status: "processing" }),
+        source({ title: "B", status: "ready" }),
+        source({ title: "C", status: "failed" }),
+      ]),
+    );
+    expect(badge(html, "processing")).toContain("animate-spin");
+    expect(badge(html, "ready")).toContain("text-success");
+    expect(badge(html, "failed")).toContain("text-danger");
+    expect(badge(html, "failed")).not.toContain("animate-spin");
+  });
+
+  it("gives each row a type icon, and keeps Delete on the row (not wrapped under it)", () => {
+    const html = render(state([source({ title: "Returns", type: "pdf" })]));
+    const row = /<li class="([^"]*)"[\s\S]*?<\/li>/.exec(html);
+    expect(row?.[1]).toContain("flex");
+    expect(row?.[1]).not.toMatch(/(^| )flex-col( |$)/);
+    expect(row?.[0]).toMatch(/<svg[^>]*lucide-file-text/);
+    expect(row?.[0]).toMatch(/aria-label="Delete Returns"[^>]*>Delete<\/button><\/li>$/);
   });
 
   it("shows `uploading` as Processing", () => {
     expect(statusLabel("uploading")).toBe("Processing");
-    expect(render(state([source({ type: "pdf", status: "uploading" })]))).toMatch(
-      /data-status="uploading"[^>]*>Processing</,
+    expect(badge(render(state([source({ type: "pdf", status: "uploading" })])), "uploading")).toMatch(
+      /animate-spin[\s\S]*>Processing$/,
     );
   });
 
@@ -105,6 +133,19 @@ describe("source list", () => {
     expect(html).toContain('id="knowledge-paste-title"');
     expect(html).toContain('id="knowledge-file"');
     expect(html).toContain("0 of 3 sources");
+  });
+
+  it("has an Add knowledge action, disabled at the limit", () => {
+    expect(render(state([]))).toMatch(/<button[^>]*>Add knowledge<svg/);
+    const full = render(state([source(), source(), source()]));
+    expect(full).toMatch(/<button[^>]*disabled=""[^>]*>Add knowledge<svg/);
+  });
+
+  it("lets the upload drop zone grow to fill its card", () => {
+    const html = render(state([]));
+    const zone = /<label for="knowledge-file"[^>]*class="([^"]*)"/.exec(html)?.[1] ?? "";
+    expect(zone.split(" ")).toContain("flex-1");
+    expect(html).toContain("or drop it here");
   });
 
   it("has a Refresh button", () => {
