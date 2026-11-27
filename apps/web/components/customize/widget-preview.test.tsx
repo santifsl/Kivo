@@ -47,4 +47,13 @@ describe("WidgetPreview", () => {
     const out = renderToStaticMarkup(<WidgetPreview config={{ ...DEFAULT_WIDGET_CONFIG, show_badge: false }} />);
     expect(out).not.toContain("Powered by");
   });
+
+  it("fits the open panel in the stage whatever the label's length", () => {
+    const out = renderToStaticMarkup(<WidgetPreview config={DEFAULT_WIDGET_CONFIG} />);
+    // The anchor is capped at the stage minus both 20 px insets, the launcher keeps its size and
+    // the panel shrinks into the rest (a long label wraps the button onto several lines).
+    expect(anchorClasses(out)).toContain("max-h-[calc(100%-2.5rem)]");
+    expect(out).toMatch(/<button[^>]*aria-expanded="true"[^>]*class="[^"]*shrink-0/);
+    expect(out).toMatch(/data-animation="fade" class="[^"]*min-h-0[^"]*shrink/);
+  });
 });
