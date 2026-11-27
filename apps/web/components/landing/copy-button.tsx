@@ -5,7 +5,11 @@ import { Button } from "../ui/button";
 
 type CopyStatus = "idle" | "copied" | "failed";
 
-const LABELS: Record<CopyStatus, string> = { idle: "Copy", copied: "Copied", failed: "Copy failed" };
+const LABELS: Record<CopyStatus, string> = {
+  idle: "Copy",
+  copied: "Copied",
+  failed: "Copy failed",
+};
 
 /** Copies `text` to the clipboard and says so for 2 seconds (also to screen readers). */
 export function CopyButton({ text, label = "Copy snippet" }: { text: string; label?: string }) {

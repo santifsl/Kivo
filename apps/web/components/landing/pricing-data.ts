@@ -38,7 +38,11 @@ const ROWS: ReadonlyArray<{ label: string; value: (limits: PlanLimits) => string
 ];
 
 export function getPricingRows(limits: Record<Plan, PlanLimits> = PLAN_LIMITS): PricingRow[] {
-  return ROWS.map(({ label, value }) => ({ label, free: value(limits.free), pro: value(limits.pro) }));
+  return ROWS.map(({ label, value }) => ({
+    label,
+    free: value(limits.free),
+    pro: value(limits.pro),
+  }));
 }
 
 /** "$9" from PLAN_PRICES (USD per month). */

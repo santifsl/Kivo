@@ -1,42 +1,61 @@
-import { GlassPanel } from "../ui/glass-panel";
+import { ArrowRight, CodeXml, FileText, MessagesSquare } from "lucide-react";
+import { Card } from "../ui/card";
 import { Reveal } from "./reveal";
 import { Section } from "./section";
 
-const STEPS = [
+export const STEPS = [
   {
-    title: "Add your info",
-    body: "Upload your docs as PDF, Markdown or text, or paste them in. That's what the bot answers from.",
+    icon: FileText,
+    title: "Add your knowledge",
+    body: "Upload PDF, Markdown or text files, or paste text in. That's all the bot answers from.",
   },
   {
-    title: "Paste one script tag",
-    body: "Copy one line into your site's HTML. The chat button appears in the corner.",
+    icon: CodeXml,
+    title: "Install the widget",
+    body: "Copy one script tag into your site's HTML. The chat button appears in the corner.",
   },
   {
-    title: "Visitors get answers",
-    body: "People ask in their own words and get answers from your docs right away, day or night.",
+    icon: MessagesSquare,
+    title: "Answer instantly",
+    body: "Visitors ask in their own words and get answers from your docs in seconds, 24/7.",
   },
 ] as const;
 
 export function HowItWorks() {
   return (
-    <Section id="how-it-works" eyebrow="How it works" title="Live in three steps">
-      <ol className="grid gap-4 md:grid-cols-3">
-        {STEPS.map((step, index) => (
-          <li key={step.title}>
+    <Section id="how-it-works" eyebrow="How it works" title="Live in three" accent="steps.">
+      <ol className="grid gap-4 md:grid-cols-[1fr_auto_1fr_auto_1fr] md:items-stretch md:gap-3">
+        {STEPS.flatMap(({ icon: Icon, title, body }, index) => [
+          <li key={title} className="contents">
             <Reveal delay={index * 100} className="h-full">
-              <GlassPanel className="flex h-full flex-col gap-3 p-6">
-                <span
-                  aria-hidden="true"
-                  className="flex size-9 items-center justify-center rounded-md border border-line bg-wash text-sm font-semibold text-ink"
-                >
-                  {index + 1}
-                </span>
-                <h3 className="text-lg font-semibold text-ink">{step.title}</h3>
-                <p className="text-sm text-ink-muted">{step.body}</p>
-              </GlassPanel>
+              <Card className="flex h-full flex-col gap-4 p-6">
+                <div className="flex items-center justify-between">
+                  <span
+                    aria-hidden="true"
+                    className="flex size-11 items-center justify-center rounded-md border border-line bg-wash text-ink"
+                  >
+                    <Icon className="size-5" strokeWidth={1.5} />
+                  </span>
+                  <span className="font-display text-2xl text-ink-subtle">
+                    <span className="sr-only">Step </span>
+                    {String(index + 1).padStart(2, "0")}
+                  </span>
+                </div>
+                <h3 className="text-lg font-medium text-ink">{title}</h3>
+                <p className="text-sm leading-relaxed text-ink-muted">{body}</p>
+              </Card>
             </Reveal>
-          </li>
-        ))}
+          </li>,
+          index < STEPS.length - 1 ? (
+            <li
+              key={`${title}-arrow`}
+              aria-hidden="true"
+              className="hidden items-center text-ink-subtle md:flex"
+            >
+              <ArrowRight className="size-5" strokeWidth={1.5} />
+            </li>
+          ) : null,
+        ])}
       </ol>
     </Section>
   );
