@@ -34,6 +34,7 @@ import {
   checkout,
   copySnippet,
   createProject,
+  cleanSupabase,
   deleteOwner,
   isPreview,
   openExternalPage,
@@ -130,72 +131,6 @@ function skip(number: number, name: string, reason: string) {
   log(`[${new Date().toISOString()}] Step ${number}: ${name}`);
   log(`    – skipped: ${reason}`);
   results.push({ step: number, name, result: "skipped" });
-}
-
-// ---------------------------------------------------------------------------
-// Cleanup in Supabase (service key over the Data API and Storage API)
-// ---------------------------------------------------------------------------
-
-async function supabase(path: string, init: RequestInit = {}) {
-  assert(supabaseUrl && supabaseSecret);
-  const response = await fetch(`${supabaseUrl}${path}`, {
-    ...init,
-    headers: { apikey: supabaseSecret, "Content-Type": "application/json", ...init.headers },
-    signal: AbortSignal.timeout(15_000),
-  });
-  assert(response.ok, `Supabase ${init.method ?? "GET"} ${path} returned HTTP ${response.status}`);
-  return response.json() as Promise<unknown>;
-}
-
-type StoredFile = { name: string };
-
-async function listFiles(projectId: string) {
-  return (await supabase("/storage/v1/object/list/knowledge", {
-    method: "POST",
-    body: JSON.stringify({ prefix: `${projectId}/`, limit: 100 }),
-  })) as StoredFile[];
-}
-
-/**
- * Deletes the account row (cascading to projects and knowledge) and every stored file under
- * the owner's projects. `knownProjectIds` are swept too, since the app may already have
- * deleted their rows while leaving files behind.
- */
-async function cleanSupabase(ownerId: string, knownProjectIds: string[]) {
-  const owner = encodeURIComponent(ownerId);
-  const rows = (await supabase(`/rest/v1/projects?owner_id=eq.${owner}&select=id`)) as {
-    id: string;
-  }[];
-  const projectIds = [...new Set([...knownProjectIds, ...rows.map((row) => row.id)])];
-  let files = 0;
-  for (const id of projectIds) {
-    const names = (await listFiles(id)).map((file) => `${id}/${file.name}`);
-    if (names.length === 0) continue;
-    await supabase("/storage/v1/object/knowledge", {
-      method: "DELETE",
-      body: JSON.stringify({ prefixes: names }),
-    });
-    files += names.length;
-  }
-  await supabase(`/rest/v1/accounts?clerk_user_id=eq.${owner}`, {
-    method: "DELETE",
-    headers: { Prefer: "return=minimal" },
-  }).catch((error: unknown) => {
-    // return=minimal answers 204 with no body.
-    if (!(error instanceof SyntaxError)) throw error;
-  });
-
-  // Verify: no account, no projects, no files left under any of the run's projects.
-  const accounts = (await supabase(
-    `/rest/v1/accounts?clerk_user_id=eq.${owner}&select=clerk_user_id`,
-  )) as unknown[];
-  const left = (await supabase(`/rest/v1/projects?owner_id=eq.${owner}&select=id`)) as unknown[];
-  assert.equal(accounts.length, 0, "The Supabase account row is still there.");
-  assert.equal(left.length, 0, "Supabase projects are still there.");
-  for (const id of projectIds) {
-    assert.equal((await listFiles(id)).length, 0, `Stored files remain under ${id}/.`);
-  }
-  return { projects: projectIds.length, files };
 }
 
 // ---------------------------------------------------------------------------
@@ -401,7 +336,11 @@ async function main(secret: string) {
     }
     try {
       if (ownerId && supabaseUrl && supabaseSecret) {
-        const removed = await cleanSupabase(ownerId, projectId ? [projectId] : []);
+        const removed = await cleanSupabase(
+          { url: supabaseUrl, secret: supabaseSecret },
+          ownerId,
+          projectId ? [projectId] : [],
+        );
         log(
           `    Supabase account deleted; verified 0 accounts, 0 projects, 0 files left ` +
             `(swept ${removed.projects} project folder(s), removed ${removed.files} leftover file(s))`,

@@ -1,0 +1,208 @@
+{
+  "origin": "https://kivo-git-urk-t09-visual-qa-santifsl.vercel.app",
+  "at": "2026-11-27T05:42:09.867Z",
+  "terracotta": [
+    {
+      "label": "terracotta on ink",
+      "ratio": 5.26,
+      "normalText": true,
+      "largeText": true
+    },
+    {
+      "label": "terracotta on graphite",
+      "ratio": 3.83,
+      "normalText": false,
+      "largeText": true
+    },
+    {
+      "label": "terracotta on paper",
+      "ratio": 3.49,
+      "normalText": false,
+      "largeText": true
+    },
+    {
+      "label": "terracotta on white",
+      "ratio": 3.74,
+      "normalText": false,
+      "largeText": true
+    }
+  ],
+  "shots": [
+    "375-dark-01-landing.png",
+    "375-light-02-sign-in.png",
+    "375-light-03-sign-up.png",
+    "375-dark-02-sign-in.png",
+    "375-dark-03-sign-up.png",
+    "768-dark-01-landing.png",
+    "768-light-02-sign-in.png",
+    "768-light-03-sign-up.png",
+    "768-dark-02-sign-in.png",
+    "768-dark-03-sign-up.png",
+    "1440-dark-01-landing.png",
+    "1440-light-02-sign-in.png",
+    "1440-light-03-sign-up.png",
+    "1440-dark-02-sign-in.png",
+    "1440-dark-03-sign-up.png",
+    "375-light-04-projects-empty.png",
+    "375-dark-04-projects-empty.png",
+    "768-light-04-projects-empty.png",
+    "768-dark-04-projects-empty.png",
+    "1440-light-04-projects-empty.png",
+    "1440-dark-04-projects-empty.png",
+    "375-light-09-conversations-empty.png",
+    "375-dark-09-conversations-empty.png",
+    "768-light-09-conversations-empty.png",
+    "768-dark-09-conversations-empty.png",
+    "1440-light-09-conversations-empty.png",
+    "1440-dark-09-conversations-empty.png",
+    "375-light-05-projects-one.png",
+    "375-light-06-overview.png",
+    "375-light-07-knowledge.png",
+    "375-light-08-install.png",
+    "375-light-10-conversations.png",
+    "375-light-11-conversation-thread.png",
+    "375-light-12-customize-free.png",
+    "375-light-13-billing-free.png",
+    "375-dark-05-projects-one.png",
+    "375-dark-06-overview.png",
+    "375-dark-07-knowledge.png",
+    "375-dark-08-install.png",
+    "375-dark-10-conversations.png",
+    "375-dark-11-conversation-thread.png",
+    "375-dark-12-customize-free.png",
+    "375-dark-13-billing-free.png",
+    "768-light-05-projects-one.png",
+    "768-light-06-overview.png",
+    "768-light-07-knowledge.png",
+    "768-light-08-install.png",
+    "768-light-10-conversations.png",
+    "768-light-11-conversation-thread.png",
+    "768-light-12-customize-free.png",
+    "768-light-13-billing-free.png",
+    "768-dark-05-projects-one.png",
+    "768-dark-06-overview.png",
+    "768-dark-07-knowledge.png",
+    "768-dark-08-install.png",
+    "768-dark-10-conversations.png",
+    "768-dark-11-conversation-thread.png",
+    "768-dark-12-customize-free.png",
+    "768-dark-13-billing-free.png",
+    "1440-light-05-projects-one.png",
+    "1440-light-06-overview.png",
+    "1440-light-07-knowledge.png",
+    "1440-light-08-install.png",
+    "1440-light-10-conversations.png",
+    "1440-light-11-conversation-thread.png",
+    "1440-light-12-customize-free.png",
+    "1440-light-13-billing-free.png",
+    "1440-dark-05-projects-one.png",
+    "1440-dark-06-overview.png",
+    "1440-dark-07-knowledge.png",
+    "1440-dark-08-install.png",
+    "1440-dark-10-conversations.png",
+    "1440-dark-11-conversation-thread.png",
+    "1440-dark-12-customize-free.png",
+    "1440-dark-13-billing-free.png",
+    "375-light-14-customize-pro.png",
+    "375-light-15-billing-pro.png",
+    "375-dark-14-customize-pro.png",
+    "375-dark-15-billing-pro.png",
+    "1440-light-14-customize-pro.png",
+    "1440-light-15-billing-pro.png",
+    "1440-dark-14-customize-pro.png",
+    "1440-dark-15-billing-pro.png",
+    "375-light-16-widget-panel.png",
+    "375-dark-17-launcher-on-landing.png",
+    "768-light-16-widget-panel.png",
+    "768-dark-17-launcher-on-landing.png",
+    "1440-light-16-widget-panel.png",
+    "1440-dark-17-launcher-on-landing.png"
+  ],
+  "findings": [
+    {
+      "page": "02-sign-in",
+      "theme": "light",
+      "width": 375,
+      "check": "contrast",
+      "detail": "2.83:1 < 4.5:1 — \"Development mode\" rgb(243, 107, 22) on rgb(247, 247, 246) +image (p.cl-internal-7or2pm \"Development mode\")"
+    },
+    {
+      "page": "03-sign-up",
+      "theme": "light",
+      "width": 375,
+      "check": "contrast",
+      "detail": "2.83:1 < 4.5:1 — \"Development mode\" rgb(243, 107, 22) on rgb(247, 247, 246) +image (p.cl-internal-7or2pm \"Development mode\")"
+    },
+    {
+      "page": "02-sign-in",
+      "theme": "light",
+      "width": 768,
+      "check": "contrast",
+      "detail": "2.83:1 < 4.5:1 — \"Development mode\" rgb(243, 107, 22) on rgb(247, 247, 246) +image (p.cl-internal-7or2pm \"Development mode\")"
+    },
+    {
+      "page": "03-sign-up",
+      "theme": "light",
+      "width": 768,
+      "check": "contrast",
+      "detail": "2.83:1 < 4.5:1 — \"Development mode\" rgb(243, 107, 22) on rgb(247, 247, 246) +image (p.cl-internal-7or2pm \"Development mode\")"
+    },
+    {
+      "page": "02-sign-in",
+      "theme": "light",
+      "width": 1440,
+      "check": "contrast",
+      "detail": "2.83:1 < 4.5:1 — \"Development mode\" rgb(243, 107, 22) on rgb(247, 247, 246) +image (p.cl-internal-7or2pm \"Development mode\")"
+    },
+    {
+      "page": "03-sign-up",
+      "theme": "light",
+      "width": 1440,
+      "check": "contrast",
+      "detail": "2.83:1 < 4.5:1 — \"Development mode\" rgb(243, 107, 22) on rgb(247, 247, 246) +image (p.cl-internal-7or2pm \"Development mode\")"
+    },
+    {
+      "page": "06-overview",
+      "theme": "light",
+      "width": 375,
+      "check": "page-error",
+      "detail": "Minified React error #418; visit https://react.dev/errors/418?args[]=HTML&args[]= for the full message or use the non-minified dev environment for full errors and additional helpful warnings."
+    },
+    {
+      "page": "06-overview",
+      "theme": "dark",
+      "width": 375,
+      "check": "page-error",
+      "detail": "Minified React error #418; visit https://react.dev/errors/418?args[]=HTML&args[]= for the full message or use the non-minified dev environment for full errors and additional helpful warnings."
+    },
+    {
+      "page": "06-overview",
+      "theme": "light",
+      "width": 768,
+      "check": "page-error",
+      "detail": "Minified React error #418; visit https://react.dev/errors/418?args[]=HTML&args[]= for the full message or use the non-minified dev environment for full errors and additional helpful warnings."
+    },
+    {
+      "page": "06-overview",
+      "theme": "dark",
+      "width": 768,
+      "check": "page-error",
+      "detail": "Minified React error #418; visit https://react.dev/errors/418?args[]=HTML&args[]= for the full message or use the non-minified dev environment for full errors and additional helpful warnings."
+    },
+    {
+      "page": "06-overview",
+      "theme": "light",
+      "width": 1440,
+      "check": "page-error",
+      "detail": "Minified React error #418; visit https://react.dev/errors/418?args[]=HTML&args[]= for the full message or use the non-minified dev environment for full errors and additional helpful warnings."
+    },
+    {
+      "page": "06-overview",
+      "theme": "dark",
+      "width": 1440,
+      "check": "page-error",
+      "detail": "Minified React error #418; visit https://react.dev/errors/418?args[]=HTML&args[]= for the full message or use the non-minified dev environment for full errors and additional helpful warnings."
+    }
+  ],
+  "notes": []
+}
