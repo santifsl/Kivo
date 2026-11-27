@@ -1,10 +1,10 @@
 import { EmptyState } from "@/components/ui/empty-state";
-import { GlassPanel } from "@/components/ui/glass-panel";
+import { Card } from "@/components/ui/card";
 
 export default function ConversationNotFound() {
   return (
-    <GlassPanel as="section">
+    <Card as="section">
       <EmptyState title="Conversation not found" />
-    </GlassPanel>
+    </Card>
   );
 }

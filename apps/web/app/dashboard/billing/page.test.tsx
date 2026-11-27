@@ -5,7 +5,8 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import BillingPage from "./page";
 
-const { clerk, openCheckout, openSubscription, protect } = vi.hoisted(() => ({
+const { clerk, openCheckout, openSubscription, protect, owner } = vi.hoisted(() => ({
+  owner: { plan: "free" as "free" | "pro" | null },
   clerk: { status: "ready", checkoutComplete: false, pricingReady: true },
   openCheckout: vi.fn(),
   openSubscription: vi.fn(),
@@ -13,6 +14,7 @@ const { clerk, openCheckout, openSubscription, protect } = vi.hoisted(() => ({
 }));
 
 vi.mock("@clerk/nextjs/server", () => ({ auth: { protect } }));
+vi.mock("../../../lib/accounts/get-owner-plan", () => ({ getOwnerPlan: async () => owner.plan }));
 vi.mock("@clerk/nextjs", () => ({
   ClerkFailed: ({ children }: { children: ReactNode }) =>
     clerk.status === "failed" ? children : null,
@@ -56,6 +58,7 @@ beforeEach(() => {
   clerk.status = "ready";
   clerk.checkoutComplete = false;
   clerk.pricingReady = true;
+  owner.plan = "free";
   container = document.createElement("div");
   document.body.append(container);
   root = createRoot(container);
@@ -87,7 +90,8 @@ it("protects the route and uses Clerk's personal plans and checkout", async () =
   expect(
     container.querySelector("[data-fixture-pricing-for]")?.getAttribute("data-fixture-pricing-for"),
   ).toBe("user");
-  expect([...container.querySelectorAll("h2")].map((heading) => heading.textContent)).toEqual([
+  const plans = container.querySelector('[aria-label="Subscription plans"]');
+  expect([...(plans?.querySelectorAll("h2") ?? [])].map((heading) => heading.textContent)).toEqual([
     "Free",
     "Pro",
   ]);
@@ -117,4 +121,36 @@ it("shows the dashboard error state when Clerk fails to load", async () => {
   await renderBilling();
   expect(container.querySelector("[role=alert]")?.textContent).toContain("Billing is unavailable");
   expect(container.textContent).not.toContain("Manage subscription");
+});
+
+it("shows the current plan card with what's included and one Manage subscription button", async () => {
+  await renderBilling();
+  const card = container.querySelector('[aria-labelledby="current-plan-heading"]');
+  expect(card?.querySelector("h2")?.textContent).toBe("Free plan");
+  expect(card?.textContent).toContain("$0");
+  expect(card?.textContent).toContain("1 project");
+  expect(card?.textContent).toContain("100 messages per project each month");
+  expect(card?.textContent).toContain("3 knowledge sources per project");
+  expect(card?.textContent).toContain("The default widget look");
+  const manage = [...container.querySelectorAll("button")].filter((b) => b.textContent === "Manage subscription");
+  expect(manage).toHaveLength(1);
+  expect(card?.contains(manage[0] ?? null)).toBe(true);
+});
+
+it("describes Pro from the shared limits", async () => {
+  owner.plan = "pro";
+  await renderBilling();
+  const card = container.querySelector('[aria-labelledby="current-plan-heading"]');
+  expect(card?.querySelector("h2")?.textContent).toBe("Pro plan");
+  expect(card?.textContent).toContain("$9 / month");
+  expect(card?.textContent).toContain("5 projects");
+  expect(card?.textContent).toContain("2,000 messages per project each month");
+  expect(card?.textContent).toContain("Full widget customization");
+});
+
+it("still renders when the plan can't be read", async () => {
+  owner.plan = null;
+  await renderBilling();
+  expect(container.textContent).toContain("Plan unavailable");
+  expect(container.querySelector('[aria-label="Subscription plans"]')).not.toBeNull();
 });

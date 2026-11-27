@@ -5,6 +5,7 @@ import { fakePostgrest, pgError } from "../../lib/projects/fake-postgrest";
 
 const owner = vi.hoisted(() => ({ userId: "user_owner" }));
 vi.mock("server-only", () => ({}));
+vi.mock("next/font/google", () => ({ Inter: () => ({ className: "font-inter" }) }));
 vi.mock("@clerk/nextjs/server", () => ({
   auth: Object.assign(
     async () => ({ userId: owner.userId, getToken: async () => `token_${owner.userId}` }),
@@ -20,6 +21,10 @@ vi.mock("next/navigation", () => ({
 
 // Use the real pages and owner readers with the A1 fake PostgREST transport.
 vi.mock("@/components/conversations/conversations-view", () => import("./conversations-view"));
+vi.mock("@/components/conversations/conversation-list", () => import("./conversation-list"));
+vi.mock("@/components/conversations/conversations-split", () => import("./conversations-split"));
+vi.mock("@/components/conversations/load-conversation-rows", () => import("./load-conversation-rows"));
+vi.mock("@/components/ui/card", () => import("../ui/card"));
 vi.mock("@/lib/conversations/conversations", () => import("../../lib/conversations/conversations"));
 vi.mock("@/lib/projects/owner-session", () => import("../../lib/projects/owner-session"));
 vi.mock("@/components/ui/loading-state", () => import("../ui/loading-state"));
@@ -107,6 +112,36 @@ const threadPage = (id = PROJECT) =>
     searchParams: Promise.resolve({}),
   });
 
+const isListQuery = (params: URLSearchParams) => params.get("select")?.includes("first_visitor") ?? false;
+const isCountQuery = (params: URLSearchParams) => params.get("select")?.includes("conversations!inner") ?? false;
+
+/** Answers the list reads (project check, summaries, message counts) with `savedList`. */
+function serveList(list = savedList) {
+  pg.on("GET", "/rest/v1/projects", { body: [{ id: PROJECT }] });
+  pg.on("GET", "/rest/v1/conversations", (req) =>
+    isListQuery(req.params)
+      ? {
+          body: list.conversations.map(({ id, created_at, visitor_id, preview }) => ({
+            id,
+            created_at,
+            visitor_id,
+            first_visitor: [{ body: preview }],
+          })),
+        }
+      : { body: [savedThread.conversation] },
+  );
+  pg.on("GET", "/rest/v1/messages", (req) =>
+    isCountQuery(req.params)
+      ? {
+          body: [
+            { id: "message-3", conversation_id: NEW_THREAD },
+            ...savedThread.messages.map(({ id, conversation_id }) => ({ id, conversation_id })),
+          ],
+        }
+      : { body: savedThread.messages },
+  );
+}
+
 describe("Conversations dashboard", () => {
   it("shows an empty state and refresh control before the first chat", async () => {
     pg.on("GET", "/rest/v1/projects", { body: [{ id: PROJECT }] });
@@ -118,21 +153,7 @@ describe("Conversations dashboard", () => {
   });
 
   it("shows newest-first links, escaped previews, counts, and timestamps", async () => {
-    pg.on("GET", "/rest/v1/projects", { body: [{ id: PROJECT }] });
-    pg.on("GET", "/rest/v1/conversations", {
-      body: savedList.conversations.map(({ id, created_at, visitor_id, preview }) => ({
-        id,
-        created_at,
-        visitor_id,
-        first_visitor: [{ body: preview }],
-      })),
-    });
-    pg.on("GET", "/rest/v1/messages", {
-      body: [
-        { id: "message-3", conversation_id: NEW_THREAD },
-        ...savedThread.messages.map(({ id, conversation_id }) => ({ id, conversation_id })),
-      ],
-    });
+    serveList();
 
     const html = renderToStaticMarkup(await listPage());
     const oldLink = `href="/dashboard/projects/${PROJECT}/conversations/${OLD_THREAD}"`;
@@ -146,13 +167,16 @@ describe("Conversations dashboard", () => {
     expect(html).toMatch(/1 message</);
     expect(html).toMatch(/2 messages</);
     expect(html).toContain(`dateTime="${OLD_TIME}"`);
-    expect(html).toContain("Nov 19, 2026");
-    expect(html).toContain("UTC");
+    // Relative time, with the full UTC time on hover.
+    expect(html).toMatch(/title="Nov 19, 2026, 11:30\sPM UTC">[^<]+</);
+    expect(html).toContain("lucide-message-square");
+    // No thread open: the right pane's hint, and the list shows at every width.
+    expect(html).toContain("Pick a conversation");
+    expect(html).not.toContain('aria-current="page"');
   });
 
   it("renders the oldest-first thread with role labels, plain text and a way back", async () => {
-    pg.on("GET", "/rest/v1/conversations", { body: [savedThread.conversation] });
-    pg.on("GET", "/rest/v1/messages", { body: savedThread.messages });
+    serveList();
 
     const html = renderToStaticMarkup(await threadPage());
     expect(html).toContain(`href="/dashboard/projects/${PROJECT}/conversations"`);
@@ -160,6 +184,23 @@ describe("Conversations dashboard", () => {
     expect(html).toContain("<ol");
     expect(html).toContain(">Visitor</span>");
     expect(html).toContain(">Bot</span>");
+    // Visitor on the right with the ink bubble; bot on the left, grey, with the K.
+    const visitor = /<li data-role="visitor" class="([^"]*)"[\s\S]*?<\/li>/.exec(html);
+    const bot = /<li data-role="bot" class="([^"]*)"[\s\S]*?<\/li>/.exec(html);
+    expect(visitor?.[1]).toContain("self-end");
+    expect(visitor?.[0]).toContain("bg-accent text-accent-ink");
+    expect(visitor?.[0]).not.toContain("<svg");
+    expect(bot?.[1]).toContain("self-start");
+    expect(bot?.[0]).toContain("bg-wash-strong");
+    expect(bot?.[0]).toMatch(/<svg[^>]*aria-hidden="true"/);
+    // Next to the list, with this thread's row current; text only inside the thread region.
+    // The thread doesn't wait for the list: it streams in behind a fallback, and the static
+    // render made no list reads (no summaries query, no message-count query).
+    expect(html).toContain("Loading conversations…");
+    expect(pg.to("/rest/v1/conversations").filter((r) => isListQuery(r.params))).toHaveLength(0);
+    expect(pg.to("/rest/v1/messages").filter((r) => isCountQuery(r.params))).toHaveLength(0);
+    const region = /<section[^>]*aria-labelledby="conversation-heading"[\s\S]*?<\/section>/.exec(html)?.[0] ?? "";
+    expect(region.match(/ph-no-capture/g)).toHaveLength(2);
     expect(html.indexOf(">Visitor</span>")).toBeLessThan(html.indexOf(">Bot</span>"));
     expect(html).toContain("&lt;img src=x alt=&quot;visitor&quot;&gt;");
     expect(html).not.toContain("<img");
@@ -177,8 +218,7 @@ describe("Conversations dashboard", () => {
   });
 
   it("returns not found if an owned thread belongs to another project", async () => {
-    pg.on("GET", "/rest/v1/conversations", { body: [savedThread.conversation] });
-    pg.on("GET", "/rest/v1/messages", { body: savedThread.messages });
+    serveList();
     await expect(threadPage(OTHER_PROJECT)).rejects.toThrow("Not found");
   });
 
@@ -194,5 +234,17 @@ describe("Conversations dashboard", () => {
     expect(error).toContain('role="alert"');
     expect(error).toContain("load conversations");
     expect(error).toContain("Try again");
+  });
+});
+
+describe("ConversationList", () => {
+  it("marks only the open thread's row as current", async () => {
+    const { ConversationList } = await import("./conversation-list");
+    const { toConversationRows } = await import("./conversations-view");
+    const rows = toConversationRows(PROJECT, savedList.conversations);
+    const html = renderToStaticMarkup(<ConversationList rows={rows} selectedId={OLD_THREAD} />);
+    const current = [...html.matchAll(/<a [^>]*aria-current="page"[^>]*>/g)].map((m) => m[0]);
+    expect(current).toHaveLength(1);
+    expect(current[0]).toContain(`href="/dashboard/projects/${PROJECT}/conversations/${OLD_THREAD}"`);
   });
 });

@@ -4,7 +4,7 @@ import { ClerkFailed, ClerkLoaded, ClerkLoading, PricingTable, Show } from "@cle
 import { SubscriptionDetailsButton } from "@clerk/nextjs/experimental";
 import { Button } from "../ui/button";
 import { ErrorState } from "../ui/error-state";
-import { GlassPanel } from "../ui/glass-panel";
+import { Card } from "../ui/card";
 import { LoadingState } from "../ui/loading-state";
 import { useClerkAppearance } from "../auth/clerk-appearance";
 
@@ -13,7 +13,7 @@ const loadingPlans = <LoadingState label="Loading subscription plans…" rows={2
 export function BillingPlans() {
   const appearance = useClerkAppearance();
   return (
-    <GlassPanel as="section" aria-label="Subscription plans" className="min-w-0 p-4 sm:p-6">
+    <Card as="section" aria-label="Subscription plans" className="min-w-0 p-4 sm:p-6">
       <ClerkLoading>{loadingPlans}</ClerkLoading>
       <ClerkLoaded>
         {appearance ? (
@@ -33,7 +33,7 @@ export function BillingPlans() {
           description="We couldn't load the subscription plans. Refresh the page to try again."
         />
       </ClerkFailed>
-    </GlassPanel>
+    </Card>
   );
 }
 

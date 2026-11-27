@@ -1,105 +1,118 @@
-import type { GetConversationResponse, ListConversationsResponse } from "@kivo/shared";
+import type { GetConversationResponse } from "@kivo/shared";
+import { ArrowLeft, MessagesSquare } from "lucide-react";
 import Link from "next/link";
+import { KivoAppMark } from "../brand/logo";
+import { formatRelativeTime } from "../overview/overview";
 import { CONVERSATIONS_TAB, projectTabHref } from "../projects/project-tabs";
+import { Card } from "../ui/card";
 import { cn } from "../ui/cn";
 import { EmptyState } from "../ui/empty-state";
-import { GlassPanel } from "../ui/glass-panel";
-import { ConversationTime } from "./conversation-time";
+import type { ConversationRow } from "./conversation-list";
+import { ConversationTime, formatConversationTime } from "./conversation-time";
 import { RefreshButton } from "./refresh-button";
 
-export function ConversationsView({
-  projectId,
-  conversations,
-}: ListConversationsResponse & { projectId: string }) {
+/** The list's rows, with times formatted once on the server. */
+export function toConversationRows(
+  projectId: string,
+  conversations: readonly { id: string; created_at: string; preview: string; message_count: number }[],
+  now: Date = new Date(),
+): ConversationRow[] {
   const listHref = projectTabHref(projectId, CONVERSATIONS_TAB);
+  return conversations.map(({ id, created_at, preview, message_count }) => ({
+    id,
+    href: `${listHref}/${encodeURIComponent(id)}`,
+    preview,
+    message_count,
+    created_at,
+    relative: formatRelativeTime(created_at, now),
+    absolute: formatConversationTime(created_at),
+  }));
+}
 
+/** The right pane before a thread is picked (only shown from 1024 px). */
+export function NoThreadSelected() {
   return (
-    <GlassPanel as="section" aria-labelledby="conversations-heading">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line p-4 sm:px-6">
-        <h2 id="conversations-heading" className="text-lg font-semibold text-ink">
-          Conversations
-        </h2>
-        <RefreshButton />
-      </div>
-      {conversations.length === 0 ? (
-        <EmptyState
-          title="No conversations yet"
-          description="Chats from this project's widget will appear here after you refresh."
-        />
-      ) : (
-        <ul className="divide-y divide-line">
-          {conversations.map(({ id, created_at, preview, message_count }) => (
-            <li key={id}>
-              <Link
-                href={`${listHref}/${encodeURIComponent(id)}`}
-                prefetch={false}
-                className="flex flex-col gap-2 px-4 py-4 text-ink hover:bg-wash focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ink sm:px-6"
-              >
-                <p className="ph-no-capture text-sm font-medium wrap-anywhere whitespace-pre-wrap">
-                  {preview || "No visitor message"}
-                </p>
-                <p className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-ink-muted">
-                  <span>
-                    {message_count} {message_count === 1 ? "message" : "messages"}
-                  </span>
-                  <ConversationTime timestamp={created_at} />
-                </p>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      )}
-    </GlassPanel>
+    <Card>
+      <EmptyState
+        icon={MessagesSquare}
+        title="Pick a conversation"
+        description="Choose one on the left to read the whole chat."
+      />
+    </Card>
   );
 }
 
+/**
+ * One thread, oldest first, laid out like the widget: the visitor on the
+ * right (ink bubble), the bot on the left (grey bubble with the K). Text only.
+ */
 export function ConversationView({ conversation, messages }: GetConversationResponse) {
   return (
-    <div className="flex flex-col gap-3">
-      <Link
-        href={projectTabHref(conversation.project_id, CONVERSATIONS_TAB)}
-        className="w-fit text-sm text-ink-muted hover:text-ink"
-      >
-        ← Back to conversations
-      </Link>
-      <GlassPanel as="section" aria-labelledby="conversation-heading">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line p-4 sm:px-6">
-          <div>
-            <h2 id="conversation-heading" className="text-lg font-semibold text-ink">
-              Conversation
-            </h2>
-            <p className="text-xs text-ink-muted">
-              <ConversationTime timestamp={conversation.created_at} />
-            </p>
-          </div>
+    <Card as="section" aria-labelledby="conversation-heading" className="overflow-hidden">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-4 py-3 sm:px-5">
+        <div className="flex min-w-0 flex-col gap-1">
+          {/* Below 1024 px the list is hidden here, so give a way back. */}
+          <Link
+            href={projectTabHref(conversation.project_id, CONVERSATIONS_TAB)}
+            className="inline-flex w-fit items-center gap-1 text-sm text-ink-muted hover:text-ink focus-visible:outline-2 focus-visible:outline-brand lg:hidden"
+          >
+            <ArrowLeft aria-hidden="true" className="size-4" strokeWidth={1.75} />
+            Back to conversations
+          </Link>
+          <h2 id="conversation-heading" className="text-base font-medium text-ink">
+            Conversation
+          </h2>
+          <p className="text-xs text-ink-muted">
+            <ConversationTime timestamp={conversation.created_at} />
+          </p>
+        </div>
+        {/* From 1024 px the list's Refresh is on screen; one Refresh at a time. */}
+        <div className="lg:hidden">
           <RefreshButton />
         </div>
-        {messages.length === 0 ? (
-          <EmptyState title="No messages yet" />
-        ) : (
-          <ol className="flex flex-col gap-4 p-4 sm:p-6">
-            {messages.map(({ id, role, body, created_at }) => (
+      </div>
+      {messages.length === 0 ? (
+        <EmptyState title="No messages yet" />
+      ) : (
+        <ol className="flex flex-col gap-4 px-4 py-5 sm:px-6">
+          {messages.map(({ id, role, body, created_at }) => {
+            const visitor = role === "visitor";
+            return (
               <li
                 key={id}
-                className={cn(
-                  "w-fit max-w-[90%] min-w-0 rounded-lg border border-line px-4 py-3 sm:max-w-[75%]",
-                  role === "bot" ? "self-end bg-wash-strong" : "self-start bg-wash",
-                )}
+                data-role={role}
+                className={cn("flex max-w-[90%] min-w-0 gap-2.5 sm:max-w-[75%]", visitor ? "self-end" : "self-start")}
               >
-                <div className="mb-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-ink-muted">
-                  <span className="font-semibold text-ink">
-                    {role === "visitor" ? "Visitor" : "Bot"}
+                {/* The mark's own CSS sets display, so the theme switch goes on wrappers. */}
+                {visitor ? null : (
+                  <span aria-hidden="true" data-testid="bot-avatar" className="mt-0.5 shrink-0">
+                    <span className="dark:hidden">
+                      <KivoAppMark size={28} tone="ink" decorative />
+                    </span>
+                    <span className="hidden dark:block">
+                      <KivoAppMark size={28} tone="paper" decorative />
+                    </span>
                   </span>
-                  <ConversationTime timestamp={created_at} />
+                )}
+                <div className={cn("flex min-w-0 flex-col gap-1", visitor && "items-end")}>
+                  <div
+                    className={cn(
+                      "rounded-lg px-3.5 py-2.5",
+                      visitor ? "bg-accent text-accent-ink" : "border border-line bg-wash-strong text-ink",
+                    )}
+                  >
+                    <span className="sr-only">{visitor ? "Visitor" : "Bot"}</span>
+                    <p className="ph-no-capture text-sm leading-relaxed wrap-anywhere whitespace-pre-wrap">{body}</p>
+                  </div>
+                  <span className="px-1 text-xs text-ink-subtle">
+                    <ConversationTime timestamp={created_at} />
+                  </span>
                 </div>
-                <p className="ph-no-capture text-sm leading-relaxed wrap-anywhere whitespace-pre-wrap text-ink">
-                  {body}
-                </p>
               </li>
-            ))}
-          </ol>
-        )}
-      </GlassPanel>
-    </div>
+            );
+          })}
+        </ol>
+      )}
+    </Card>
   );
 }
