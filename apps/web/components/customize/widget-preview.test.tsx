@@ -23,4 +23,28 @@ describe("WidgetPreview", () => {
     // Nothing pins it to the frame's edge.
     expect(classes.some((c) => /^(inset|top|bottom|left|right)-(0|px)$/.test(c))).toBe(false);
   });
+
+  it("draws the real widget panel (components/embed), not a copy", () => {
+    const out = renderToStaticMarkup(
+      <WidgetPreview config={{ ...DEFAULT_WIDGET_CONFIG, header_text: "Acme help" }} />,
+    );
+    // PanelView in preview mode: avatar with the header's letter, Online dot, round input,
+    // the icon send button and the badge.
+    expect(out).toContain('data-preview="true"');
+    expect(out).toMatch(/data-testid="avatar"[^>]*>A</);
+    expect(out).toContain('data-testid="online-dot"');
+    expect(out).toMatch(/<input[^>]*placeholder="Ask a question…"[^>]*rounded-full/);
+    expect(out).toMatch(/<button[^>]*aria-label="Send"[^>]*><svg/);
+    expect(out).toContain('data-testid="powered-by"');
+    // The old hand-drawn copy is gone: no text "Send" button.
+    expect(out).not.toMatch(/>Send</);
+    // Still inside the light customer-site frame, with no second h1 on the dashboard page.
+    expect(out).toMatch(/data-testid="preview-frame"[\s\S]*data-preview="true"/);
+    expect(out).not.toContain("<h1");
+  });
+
+  it("follows the badge setting like the real panel", () => {
+    const out = renderToStaticMarkup(<WidgetPreview config={{ ...DEFAULT_WIDGET_CONFIG, show_badge: false }} />);
+    expect(out).not.toContain("Powered by");
+  });
 });

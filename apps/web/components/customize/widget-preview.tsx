@@ -1,6 +1,7 @@
-import { APP_NAME, DEFAULT_WIDGET_CONFIG, type WidgetConfig } from "@kivo/shared";
+import { DEFAULT_WIDGET_CONFIG, type WidgetConfig } from "@kivo/shared";
 import { useId, useState } from "react";
 import { cn } from "../ui/cn";
+import { PanelView } from "../embed/panel-view";
 import { Card } from "../ui/card";
 import styles from "./widget-preview.module.css";
 
@@ -9,6 +10,8 @@ import styles from "./widget-preview.module.css";
  * like the real widget on a page (audit #11).
  */
 export const LAUNCHER_INSET = { top: "top-5", bottom: "bottom-5", left: "left-5", right: "right-5" } as const;
+
+const noop = () => {};
 
 export function WidgetPreview({ config }: { config: WidgetConfig }) {
   const [open, setOpen] = useState(true);
@@ -71,27 +74,26 @@ export function WidgetPreview({ config }: { config: WidgetConfig }) {
                   key={config.animation}
                   data-animation={config.animation}
                   className={cn(
-                    "flex h-64 w-72 max-w-full flex-col overflow-hidden rounded-lg border border-line bg-glass-strong shadow-glass-lg",
+                    "h-80 w-72 max-w-full overflow-hidden rounded-lg border border-line shadow-glass-lg",
                     styles.panel,
                   )}
                   style={{ transformOrigin: config.position.replace("-", " ") }}
                 >
-                  <div className="flex items-center gap-3 border-b border-line px-4 py-3">
-                    <span aria-hidden="true" className="size-2.5 shrink-0 rounded-sm bg-ink" />
-                    <p className="ph-no-capture text-sm font-semibold wrap-anywhere text-ink">{header}</p>
-                  </div>
-                  <p className="m-auto px-4 text-center text-sm text-ink-muted">
-                    Ask a question and we&apos;ll answer right away.
-                  </p>
-                  <div aria-hidden="true" className="flex items-center gap-2 border-t border-line px-3 py-2 text-xs">
-                    <span className="min-w-0 flex-1 rounded-md border border-line bg-wash px-2 py-2 text-ink-muted">
-                      Ask a question…
-                    </span>
-                    <span className="rounded-md bg-accent px-3 py-2 text-accent-ink">Send</span>
-                  </div>
-                  {config.show_badge ? (
-                    <p className="pb-2 text-center text-xs text-ink-muted">Powered by {APP_NAME}</p>
-                  ) : null}
+                  {/* The real widget panel (components/embed), in its preview mode. */}
+                  <PanelView
+                    preview
+                    phase="ready"
+                    headerText={header}
+                    showBadge={config.show_badge}
+                    messages={[]}
+                    typing={false}
+                    error={null}
+                    draft=""
+                    onDraftChange={noop}
+                    onSubmit={noop}
+                    onClose={() => setOpen(false)}
+                    onRetry={noop}
+                  />
                 </div>
               ) : null}
             </div>
