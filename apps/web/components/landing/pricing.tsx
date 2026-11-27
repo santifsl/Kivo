@@ -9,7 +9,7 @@ import { formatMonthlyPrice, getPricingRows } from "./pricing-data";
 import { Reveal } from "./reveal";
 import { Section } from "./section";
 
-export const PRO_BADGE = "Most popular";
+export const PRO_BADGE = "Recommended";
 
 const PLAN_CARDS: ReadonlyArray<{ plan: Plan; name: string; blurb: string; cta: string }> = [
   {
