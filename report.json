@@ -1,0 +1,114 @@
+{
+  "light-1440-projects": {
+    "classAtBody": "light",
+    "low": []
+  },
+  "light-1440-knowledge": {
+    "classAtBody": "light",
+    "low": []
+  },
+  "light-1440-conversations": {
+    "classAtBody": "light",
+    "low": []
+  },
+  "light-1440-thread": {
+    "classAtBody": "light",
+    "low": []
+  },
+  "light-1440-customize": {
+    "classAtBody": "light",
+    "low": []
+  },
+  "light-1440-install": {
+    "classAtBody": "light",
+    "low": []
+  },
+  "light-1440-billing": {
+    "classAtBody": "light",
+    "low": []
+  },
+  "light-375-projects": {
+    "classAtBody": "light",
+    "low": []
+  },
+  "light-375-knowledge": {
+    "classAtBody": "light",
+    "low": []
+  },
+  "light-375-conversations": {
+    "classAtBody": "light",
+    "low": []
+  },
+  "light-375-thread": {
+    "classAtBody": "light",
+    "low": []
+  },
+  "light-375-customize": {
+    "classAtBody": "light",
+    "low": []
+  },
+  "light-375-install": {
+    "classAtBody": "light",
+    "low": []
+  },
+  "light-375-billing": {
+    "classAtBody": "light",
+    "low": []
+  },
+  "dark-1440-projects": {
+    "classAtBody": "dark",
+    "low": []
+  },
+  "dark-1440-knowledge": {
+    "classAtBody": "dark",
+    "low": []
+  },
+  "dark-1440-conversations": {
+    "classAtBody": "dark",
+    "low": []
+  },
+  "dark-1440-thread": {
+    "classAtBody": "dark",
+    "low": []
+  },
+  "dark-1440-customize": {
+    "classAtBody": "dark",
+    "low": []
+  },
+  "dark-1440-install": {
+    "classAtBody": "dark",
+    "low": []
+  },
+  "dark-1440-billing": {
+    "classAtBody": "dark",
+    "low": []
+  },
+  "dark-375-projects": {
+    "classAtBody": "dark",
+    "low": []
+  },
+  "dark-375-knowledge": {
+    "classAtBody": "dark",
+    "low": []
+  },
+  "dark-375-conversations": {
+    "classAtBody": "dark",
+    "low": []
+  },
+  "dark-375-thread": {
+    "classAtBody": "dark",
+    "low": []
+  },
+  "dark-375-customize": {
+    "classAtBody": "dark",
+    "low": []
+  },
+  "dark-375-install": {
+    "classAtBody": "dark",
+    "low": []
+  },
+  "dark-375-billing": {
+    "classAtBody": "dark",
+    "low": []
+  }
+}
