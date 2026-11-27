@@ -74,7 +74,9 @@ function styles(config: ButtonConfig): string {
     `z-index:2147483647!important;display:block!important;font:14px/1.2 system-ui,sans-serif!important}` +
     `button{all:initial;box-sizing:border-box;position:relative;display:flex;align-items:center;gap:8px;` +
     `height:48px;padding:0 20px;border-radius:24px;cursor:pointer;font:600 15px/1 system-ui,sans-serif;` +
-    `color:#fff;background:${config.button_color};box-shadow:0 4px 14px rgba(0,0,0,.25)}` +
+    // A faint white ring + soft shadow keep a dark launcher visible on a dark page.
+    `color:#fff;background:${config.button_color};` +
+    `box-shadow:0 0 0 2px rgba(255,255,255,.2),0 2px 6px rgba(0,0,0,.2),0 8px 24px rgba(0,0,0,.28)}` +
     `button:focus-visible{outline:2px solid ${config.button_color};outline-offset:3px}` +
     `.d{position:absolute;top:-2px;${h === "left" ? "left" : "right"}:-2px;width:12px;height:12px;` +
     `border-radius:50%;background:#e5484d;border:2px solid #fff;display:none}` +

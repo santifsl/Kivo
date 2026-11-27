@@ -1,12 +1,5 @@
-import { SignUp } from "@clerk/nextjs";
-import { Suspense } from "react";
+import { AuthLayout } from "../../../components/auth/auth-layout";
 
 export default function SignUpPage() {
-  return (
-    <main className="flex min-h-screen items-center justify-center p-4">
-      <Suspense>
-        <SignUp />
-      </Suspense>
-    </main>
-  );
+  return <AuthLayout mode="sign-up" />;
 }

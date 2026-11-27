@@ -63,6 +63,13 @@ describe("mount: render or nothing", () => {
     expect(document.querySelector("button, style, iframe")).toBeNull();
   });
 
+  it("keeps the launcher visible on dark pages: a faint white ring and a soft shadow", async () => {
+    const { css } = await mountWith({ ...DEFAULT_WIDGET_CONFIG, button_color: "#000000" });
+    const button = /(?:^|\})button\{([^}]*)\}/.exec(css)?.[1] ?? "";
+    expect(button).toContain("background:#000000");
+    expect(button).toMatch(/box-shadow:0 0 0 2px rgba\(255,255,255,\.2\),[^;}]*rgba\(0,0,0,/);
+  });
+
   it("fetches the config from the script's origin with same-origin credentials", async () => {
     const fetchMock = respond(200, { config: DEFAULT_WIDGET_CONFIG });
     await mount(script());
