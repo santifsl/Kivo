@@ -19,7 +19,14 @@ import assert from "node:assert/strict";
 import { mkdir, readdir, rm, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { clerkSetup, setupClerkTestingToken } from "@clerk/testing/playwright";
-import { chromium, type Browser, type BrowserContext, type Frame, type Page } from "playwright";
+import {
+  chromium,
+  type Browser,
+  type BrowserContext,
+  type ConsoleMessage,
+  type Frame,
+  type Page,
+} from "playwright";
 import {
   allowPreview,
   askWidget,
@@ -296,7 +303,12 @@ type Screen = {
 
 async function audit(page: Page, screen: Screen, theme: Theme | "-", width: Width) {
   const errors: string[] = [];
-  page.on("pageerror", (e) => errors.push(e.message));
+  const onPageError = (e: Error) => errors.push(e.message);
+  const onConsole = (m: ConsoleMessage) => {
+    if (m.type() === "error") errors.push(`console: ${m.text()}`);
+  };
+  page.on("pageerror", onPageError);
+  page.on("console", onConsole);
   const response = await page.goto(`${origin}${screen.path}`, { waitUntil: "domcontentloaded" });
   assert(response?.ok(), `${screen.path} returned HTTP ${response?.status()}`);
   await screen.ready(page);
@@ -306,6 +318,8 @@ async function audit(page: Page, screen: Screen, theme: Theme | "-", width: Widt
   await page.screenshot({ path: `${OUT}${file}`, fullPage: true });
   shots.push(file);
   const report = await page.evaluate(inPageChecks);
+  page.off("pageerror", onPageError);
+  page.off("console", onConsole);
   const add = (check: string, detail: string) =>
     findings.push({ page: screen.name, theme, width, check, detail });
   if (report.overflow.scrollWidth > report.overflow.viewport) {
@@ -853,4 +867,101 @@ async function eachVariant(
 // Sanity: the color math the README quotes.
 assert.equal(Math.round(contrastRatio(parseColor("#000000"), parseColor("#ffffff")) * 10) / 10, 21);
 
-await main();
+/**
+ * `--recheck`: after a fix PR, re-shoots only Overview, Customize and Billing (Free, then Pro after
+ * the test-card checkout) under their usual file names, and writes recheck-report.json.
+ * No widget question, so no OpenAI calls.
+ */
+async function recheck() {
+  await clerkSetup();
+  const browser = await chromium.launch({
+    executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH,
+  });
+  const run = crypto.randomUUID();
+  const email = `kivo-audit-${run}+clerk_test@example.com`;
+  const state = `${OUT}../.audit-state-${run}.json`;
+  const cleanupErrors: unknown[] = [];
+  let ownerId: string | undefined;
+  let projectId: string | undefined;
+  const screen = (name: string, path: string, ready: Screen["ready"]): Screen => ({
+    name,
+    path,
+    signedIn: true,
+    ready,
+  });
+  try {
+    const ownerCtx = await context(browser, { theme: "light", width: 1440 });
+    await ownerCtx.grantPermissions(["clipboard-read", "clipboard-write"], { origin });
+    const owner = await ownerCtx.newPage();
+    await owner.goto(origin);
+    ownerId = await signUp(owner, origin, email);
+    projectId = await createProject(owner, `Audit ${run.slice(0, 8)}`);
+    await uploadPdf(owner, origin);
+    await ownerCtx.storageState({ path: state });
+    const base = `/dashboard/projects/${projectId}`;
+    const heading = visible((p) => p.getByRole("heading", { level: 1 }));
+    console.log("Free");
+    await eachVariant(browser, state, [
+      screen("06-overview", base, heading),
+      screen("12-customize-free", `${base}/customize`, heading),
+      screen(
+        "13-billing-free",
+        "/dashboard/billing",
+        visible((p) => p.getByRole("region", { name: "Subscription plans" })),
+      ),
+    ]);
+    console.log("Checkout (test card)");
+    await owner.goto(`${origin}/dashboard/billing`);
+    assert(await checkout(owner), "Clerk Billing isn't in development mode.");
+    await waitForPro(owner);
+    await ownerCtx.storageState({ path: state });
+    await ownerCtx.close();
+    console.log("Pro");
+    await eachVariant(
+      browser,
+      state,
+      [
+        screen("14-customize-pro", `${base}/customize`, heading),
+        screen(
+          "15-billing-pro",
+          "/dashboard/billing",
+          visible((p) => p.getByRole("button", { name: "Manage subscription" })),
+        ),
+      ],
+      [375, 1440],
+    );
+  } finally {
+    await rm(state, { force: true });
+    console.log("Cleanup");
+    try {
+      ownerId = (await deleteOwner(email, clerkSecret)) ?? ownerId;
+      console.log(`  Clerk user ${ownerId ?? "(none)"} deleted`);
+    } catch (error) {
+      cleanupErrors.push(error);
+    }
+    if (ownerId) {
+      try {
+        const removed = await cleanSupabase(admin, ownerId, projectId ? [projectId] : []);
+        console.log(
+          `  Supabase verified clean (${removed.projects} project(s), ${removed.files} file(s) removed)`,
+        );
+      } catch (error) {
+        cleanupErrors.push(error);
+      }
+    }
+    await browser.close();
+  }
+  if (cleanupErrors.length) {
+    throw new AggregateError(cleanupErrors, `Cleanup failed: delete ${email} by hand.`);
+  }
+  const report = { origin, at: new Date().toISOString(), shots, findings, notes };
+  await writeFile(`${OUT}recheck-report.json`, `${JSON.stringify(report, null, 2)}\n`);
+  console.log(
+    `\n${shots.length} screenshots, ${findings.length} findings → ${OUT}recheck-report.json`,
+  );
+  for (const f of findings)
+    console.log(`  ${f.page} ${f.theme} ${f.width} ${f.check}: ${f.detail.slice(0, 160)}`);
+}
+
+if (process.argv.includes("--recheck")) await recheck();
+else await main();

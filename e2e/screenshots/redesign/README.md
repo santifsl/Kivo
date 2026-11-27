@@ -34,27 +34,36 @@ There are 89 screenshots, named `<width>-<theme>-<nn>-<screen>.png`.
 | Reduced motion | `prefers-reduced-motion: reduce`: no running animations (spinners excepted), no hidden reveals. The widget is opened too: no panel transition, and nothing animating in the loader or the panel. | **Pass.** 0 running, 0 hidden. The widget's transition is `0s`. |
 | Nothing stuck invisible | After scrolling through each page: text with opacity below 0.05, `visibility: hidden`, or `data-reveal="hidden"` | **Pass.** |
 | Bot avatar once per message | Count of visible avatar marks in each bot message in a thread | **Pass.** 1 per message, light and dark. |
-| Page errors | `pageerror` events | **Fail on Overview.** See issue 1. |
+| Page and console errors | `pageerror` events; the re-check adds console errors | **Failed on Overview in the first pass** (issue 1). **Clean after URK-T10.** |
 | `pnpm e2e:core` | On the same preview, with checkout | **9/9 passed.** See `core-flow-output.txt`. |
 
 The raw findings are in `report.json`.
 
-## Remaining issues, by severity
+## Re-check after URK-T10
 
-Nothing blocks launch. Overview, Customize and Billing get re-shot after URK-T10 merges.
+URK-T10 (#67, main `a890d5f`) fixed issues 1–3. On a preview of main `a890d5f` plus e2e-only commits, `node e2e/redesign-audit.ts <preview-url> --recheck` re-shot the affected screens:
+- Overview, and Customize and Billing on Free: light/dark × 375/768/1440.
+- Customize and Billing on Pro, after the test-card checkout: light/dark × 375/1440.
 
-### Medium
+The re-shot files replace the earlier ones under the same names. Results are in `recheck-report.json`:
 
-1. **Fixing in URK-T10.** **Overview throws React error #418 (hydration mismatch)** on every load, in every theme and width. The page looks right, because React re-renders it on the client, but that costs a client re-render and logs an error.
-   - Likely cause, read from the code and not confirmed in a dev build: `StatCard` renders `sub` inside a `<p>`, and Overview passes a `UsageBar` there, which is a `<div>`.
-   - A `<div>` inside a `<p>` is invalid HTML, so the browser splits the paragraph and hydration fails.
-   - Fix: make the `sub` wrapper a `<div>`, or render `UsageBar` with spans.
-2. **Fixing in URK-T10.** **The Customize live preview still draws the old widget.** It has no avatar, no Online dot, a rectangular "Send" button and the old input, so it no longer matches the real panel (shot 16). See `1440-light-14-customize-pro.png`.
+| Check | Result |
+|---|---|
+| Page errors and console errors | **None** on all 26 shots |
+| Overflow, contrast, nothing invisible | **Pass** |
 
-### Low
+The re-check makes no widget question, so the new Overview shots have no recent conversations.
 
-3. **Fixing in URK-T10.** **Billing on Free shows "Manage subscription"** in the current-plan card (`*-13-billing-free.png`). With no subscription to manage, an upgrade action would read better.
-4. **For the product owner, in the Clerk dashboard.** **Clerk plan copy** (not in the code): Free's description is "Free kivo", in lowercase. Pro's is generic ("Unlock premium features and advanced capabilities in Kivo.").
+## Issues, by severity
+
+Nothing blocks launch.
+
+| # | Severity | Issue | Status |
+|---|---|---|---|
+| 1 | Medium | Overview threw React error #418 (hydration mismatch) on every load. The cause: `StatCard` put `sub` in a `<p>`, and Overview passed a `UsageBar` `<div>` there. | **Fixed in URK-T10.** No page or console errors in the re-check. |
+| 2 | Medium | The Customize live preview drew the old widget (no avatar, no Online dot, a square "Send" button). | **Fixed in URK-T10.** It now matches the real panel (`*-14-customize-pro.png`). |
+| 3 | Low | Billing on Free showed "Manage subscription". | **Fixed in URK-T10.** It now shows "Upgrade to Pro" (`*-13-billing-free.png`). |
+| 4 | Low | Clerk plan copy, set in the Clerk dashboard and not in the code: Free's description reads "Free kivo", in lowercase. Pro's is generic. | **Open, for the product owner** (Clerk dashboard). |
 
 ### Not issues
 
