@@ -2,7 +2,7 @@
 
 import { useClerk } from "@clerk/nextjs";
 import { Check, Copy } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { captureSnippetCopied } from "../../lib/posthog/browser";
 import { Button } from "../ui/button";
 import { type CopyStatus, createCopyFeedback } from "./copy-feedback";
@@ -18,8 +18,17 @@ const LABELS: Record<CopyStatus, string> = {
 export function SnippetCopyButton({ projectId, text }: { projectId: string; text: string }) {
   const clerk = useClerk();
   const [status, setStatus] = useState<CopyStatus>("idle");
-  const [feedback] = useState(() => createCopyFeedback(setStatus));
-  useEffect(() => () => feedback.dispose(), [feedback]);
+  // One timer per mount, made in the effect so StrictMode's mount/unmount/mount
+  // gets a live one, and disposed on unmount so a late copy can't touch it.
+  const feedback = useRef<ReturnType<typeof createCopyFeedback>>(null);
+  useEffect(() => {
+    const current = createCopyFeedback(setStatus);
+    feedback.current = current;
+    return () => {
+      current.dispose();
+      feedback.current = null;
+    };
+  }, []);
 
   async function copy() {
     const ownerId = clerk.user?.id;
@@ -27,7 +36,7 @@ export function SnippetCopyButton({ projectId, text }: { projectId: string; text
       text,
       typeof navigator === "undefined" ? undefined : navigator.clipboard,
     );
-    feedback.show(ok ? "copied" : "failed");
+    feedback.current?.show(ok ? "copied" : "failed");
     if (ok && ownerId) {
       void captureSnippetCopied(ownerId, projectId, () => clerk.user?.id === ownerId);
     }

@@ -198,6 +198,16 @@ describe("createCopyFeedback", () => {
     vi.advanceTimersByTime(5000);
     expect(set).not.toHaveBeenCalledWith("idle");
   });
+
+  it("ignores a copy that settles after dispose (left Install mid-copy): no state, no timer", () => {
+    vi.useFakeTimers();
+    const set = vi.fn<(status: CopyStatus) => void>();
+    const feedback = createCopyFeedback(set);
+    feedback.dispose();
+    feedback.show("copied");
+    expect(set).not.toHaveBeenCalled();
+    expect(vi.getTimerCount()).toBe(0);
+  });
 });
 
 describe("SnippetCopyButton", () => {
