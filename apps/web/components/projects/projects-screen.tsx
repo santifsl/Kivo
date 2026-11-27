@@ -1,15 +1,20 @@
 "use client";
 
+import { FolderOpen } from "lucide-react";
 import Link from "next/link";
-import { PROJECT_NAME_MAX_LENGTH, type Project } from "@kivo/shared";
-import { Button } from "../ui/button";
+import { PROJECT_NAME_MAX_LENGTH, type Plan, type Project } from "@kivo/shared";
+import { BUTTON_BASE_CLASSES, BUTTON_VARIANT_CLASSES, Button } from "../ui/button";
+import { Card } from "../ui/card";
+import { cn } from "../ui/cn";
 import { EmptyState } from "../ui/empty-state";
-import { GlassPanel } from "../ui/glass-panel";
+import { FIELD_CLASSES } from "../ui/input";
 import { Dialog } from "./dialog";
 import { formatProjectDate } from "./format-date";
 import { BILLING_HREF, isAtProjectLimit, projectLimitMessage } from "./project-limit";
-import { projectHref } from "./project-tabs";
+import { INSTALL_TAB, projectHref, projectTabHref } from "./project-tabs";
 import { showsLimitMessage, type ProjectsState } from "./projects-state";
+import { UsageBar } from "./usage-bar";
+import { formatCount, monthlyUsage } from "./usage";
 
 // The Projects screen, drawn from state. ProjectsView owns the state and the
 // API calls. Project names are rendered as text only (React escapes them).
@@ -25,37 +30,45 @@ export interface ProjectsHandlers {
   onDialogClose: () => void;
 }
 
-const INPUT_CLASSES =
-  "h-10 w-full min-w-0 rounded-md border border-line bg-glass-strong px-3 text-sm text-ink placeholder:text-ink-subtle " +
-  "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:opacity-50";
+const INPUT_CLASSES = cn(FIELD_CLASSES, "h-10");
 
 const DRAFT_INPUT_ID = "new-project-name";
 
-export function ProjectsScreen({ state, handlers }: { state: ProjectsState; handlers: ProjectsHandlers }) {
+export function ProjectsScreen({
+  state,
+  handlers,
+  now,
+}: {
+  state: ProjectsState;
+  handlers: ProjectsHandlers;
+  /** For tests; defaults to the current time. */
+  now?: Date;
+}) {
   const empty = state.projects.length === 0;
   const form = <CreateProjectForm state={state} handlers={handlers} />;
   return (
     <>
       {empty ? (
-        <GlassPanel as="section" aria-label="Projects">
+        <Card as="section" aria-label="Projects">
           <EmptyState
+            icon={FolderOpen}
             title="No projects yet"
             description="Create a project to add your knowledge and get the widget's install code."
             action={form}
           />
-        </GlassPanel>
+        </Card>
       ) : (
         <>
-          <GlassPanel as="section" aria-label="New project" className="p-4 sm:p-6">
+          <Card as="section" aria-label="New project" className="p-4 sm:p-6">
             {form}
-          </GlassPanel>
-          <GlassPanel as="section" aria-label="Projects">
-            <ul className="divide-y divide-line">
+          </Card>
+          <section aria-label="Projects">
+            <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
               {state.projects.map((project) => (
-                <ProjectRow key={project.id} project={project} handlers={handlers} />
+                <ProjectCard key={project.id} project={project} plan={state.plan} handlers={handlers} now={now} />
               ))}
             </ul>
-          </GlassPanel>
+          </section>
         </>
       )}
       <ProjectDialog state={state} handlers={handlers} />
@@ -109,7 +122,7 @@ function LimitNotice({ state }: { state: ProjectsState }) {
     <p role="status" data-testid="project-limit" className="text-sm text-ink-muted">
       {projectLimitMessage(state.plan)}{" "}
       {state.plan === "free" ? (
-        <Link href={BILLING_HREF} className="font-medium text-ink underline underline-offset-2">
+        <Link href={BILLING_HREF} className="font-medium text-ink underline decoration-brand underline-offset-2">
           Upgrade to Pro
         </Link>
       ) : null}
@@ -117,28 +130,68 @@ function LimitNotice({ state }: { state: ProjectsState }) {
   );
 }
 
-function ProjectRow({ project, handlers }: { project: Project; handlers: ProjectsHandlers }) {
+function ProjectCard({
+  project,
+  plan,
+  handlers,
+  now,
+}: {
+  project: Project;
+  plan: Plan;
+  handlers: ProjectsHandlers;
+  now?: Date;
+}) {
+  const usage = monthlyUsage(project, plan, now);
   return (
-    <li className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-      <div className="flex min-w-0 flex-col gap-0.5">
-        <Link
-          href={projectHref(project.id)}
-          className="truncate font-medium text-ink hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
-        >
-          {project.name}
-        </Link>
-        <p className="text-xs text-ink-muted">
-          Created <time dateTime={project.created_at}>{formatProjectDate(project.created_at)}</time>
-        </p>
-      </div>
-      <div className="flex shrink-0 gap-2">
-        <Button variant="secondary" onClick={() => handlers.onRenameOpen(project)} aria-label={`Rename ${project.name}`}>
-          Rename
-        </Button>
-        <Button variant="ghost" onClick={() => handlers.onDeleteOpen(project)} aria-label={`Delete ${project.name}`}>
-          Delete
-        </Button>
-      </div>
+    <li>
+      <Card className="flex h-full flex-col gap-4 p-5" data-testid="project-card">
+        <div className="flex min-w-0 flex-col gap-0.5">
+          <Link
+            href={projectHref(project.id)}
+            className="truncate text-base font-medium text-ink hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+          >
+            {project.name}
+          </Link>
+          <p className="text-xs text-ink-muted">
+            Created <time dateTime={project.created_at}>{formatProjectDate(project.created_at)}</time>
+          </p>
+        </div>
+        <div className="flex flex-col gap-2">
+          <p className="text-sm text-ink">
+            <span className="font-medium tabular-nums">
+              {formatCount(usage.used)} / {formatCount(usage.limit)}
+            </span>{" "}
+            <span className="text-ink-muted">messages this month</span>
+          </p>
+          <UsageBar ratio={usage.ratio} />
+          <p className="text-xs text-ink-subtle">Resets {usage.resetsOn}</p>
+        </div>
+        <div className="mt-auto flex flex-wrap gap-2 pt-1">
+          <Link
+            href={projectTabHref(project.id, INSTALL_TAB)}
+            aria-label={`Install ${project.name}`}
+            className={cn(BUTTON_BASE_CLASSES, BUTTON_VARIANT_CLASSES.secondary)}
+          >
+            Install
+          </Link>
+          <Button
+            variant="secondary"
+           
+            onClick={() => handlers.onRenameOpen(project)}
+            aria-label={`Rename ${project.name}`}
+          >
+            Rename
+          </Button>
+          <Button
+            variant="ghost"
+           
+            onClick={() => handlers.onDeleteOpen(project)}
+            aria-label={`Delete ${project.name}`}
+          >
+            Delete
+          </Button>
+        </div>
+      </Card>
     </li>
   );
 }

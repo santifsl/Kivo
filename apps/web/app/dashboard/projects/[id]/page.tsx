@@ -1,12 +1,18 @@
-import { redirect } from "next/navigation";
 import { auth } from "@clerk/nextjs/server";
+import { loadOverview } from "@/components/overview/load-overview";
+import { OverviewView } from "@/components/overview/overview-view";
 import { loadOwnedProject } from "@/components/projects/load-owned-project";
-import { DEFAULT_PROJECT_TAB, projectTabHref } from "@/components/projects/project-tabs";
+import { getOwnerPlan } from "@/lib/accounts/get-owner-plan";
+import { getOwnerSession } from "@/lib/projects/owner-session";
 
-export default async function ProjectPage({ params }: Readonly<{ params: Promise<{ id: string }> }>) {
+// The project's Overview: usage, counts and the latest conversations. Every
+// read uses the owner client (RLS); another owner's id is not-found.
+export default async function ProjectOverviewPage({ params }: { params: Promise<{ id: string }> }) {
   await auth.protect();
   const { id } = await params;
-  // 404 before redirecting, so a bad id never lands on a tab URL.
   const project = await loadOwnedProject(id);
-  redirect(projectTabHref(project.id, DEFAULT_PROJECT_TAB));
+  const session = await getOwnerSession();
+  if (!session) throw new Error("No owner session on the Overview page.");
+  const [plan, data] = await Promise.all([getOwnerPlan(async () => session.client), loadOverview(session.client, project.id)]);
+  return <OverviewView project={project} plan={plan} data={data} />;
 }

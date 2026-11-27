@@ -94,9 +94,12 @@ async function createProject(page: Page, name: string) {
   await page.getByRole("textbox", { name: "New project" }).fill(name);
   await page.getByRole("button", { name: "Create project" }).click();
   await page.getByRole("link", { name, exact: true }).click();
+  // A project opens on its Overview; the widget checks start from Install.
+  await page.waitForURL(/\/projects\/[0-9a-f-]{36}$/);
+  const projectId = /\/projects\/([0-9a-f-]{36})$/.exec(new URL(page.url()).pathname)?.[1];
+  assert(projectId, "Expected the new project's Overview page.");
+  await page.getByRole("link", { name: "Install", exact: true }).click();
   await page.waitForURL(/\/install$/);
-  const projectId = /\/projects\/([0-9a-f-]{36})\/install$/.exec(new URL(page.url()).pathname)?.[1];
-  assert(projectId, "Expected the new project's install page.");
   return projectId;
 }
 
