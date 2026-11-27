@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { PLAN_LIMITS, type PlanLimits } from "@kivo/shared";
 import { buildInstallSnippet, EXAMPLE_PUBLIC_KEY } from "./install-snippet-data";
 import { formatMonthlyPrice, getPricingRows } from "./pricing-data";
+import { LinkButton } from "./link-button";
 import { Reveal } from "./reveal";
 
 describe("getPricingRows", () => {
@@ -73,5 +74,18 @@ describe("Reveal", () => {
     const out = renderToStaticMarkup(<Reveal>hi</Reveal>);
     expect(out).toContain('data-reveal="shown"');
     expect(out).not.toContain("opacity-0");
+  });
+});
+
+describe("LinkButton", () => {
+  it("has hover colors that work on a link (not only `enabled:hover:`)", () => {
+    const primary = renderToStaticMarkup(<LinkButton href="/sign-up">Go</LinkButton>);
+    const secondary = renderToStaticMarkup(
+      <LinkButton href="/sign-in" variant="secondary">
+        Go
+      </LinkButton>,
+    );
+    expect(primary).toMatch(/class="[^"]*(?<![:\w-])hover:bg-accent-hover/);
+    expect(secondary).toMatch(/class="[^"]*(?<![:\w-])hover:bg-wash/);
   });
 });

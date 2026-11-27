@@ -1,4 +1,5 @@
 import { BookOpenCheck, CircleHelp, CodeXml, Play } from "lucide-react";
+import { APP_NAME } from "@kivo/shared";
 import { SIGN_UP_PATH } from "../../lib/auth/routes";
 import { HeroArt } from "../brand/hero-art";
 import { cn } from "../ui/cn";
@@ -15,8 +16,7 @@ export const TRUST_POINTS = [
   { icon: CircleHelp, label: "Says “I don't know” instead of guessing" },
 ] as const;
 
-export const HERO_SUBTEXT =
-  "Kivo is an AI support agent that answers only from the documents you give it, so visitors get accurate answers and your team gets fewer tickets.";
+export const HERO_SUBTEXT = `${APP_NAME} is an AI support agent that answers only from the documents you give it, so visitors get accurate answers and your team gets fewer tickets.`;
 
 /** `hasDemo`: the live demo section is on the page, so "See it in action" has somewhere to go. */
 export function Hero({ hasDemo }: { hasDemo: boolean }) {

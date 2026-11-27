@@ -3,7 +3,12 @@
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { findLauncher, openLandingChat } from "./open-chat-button";
+import {
+  findLauncher,
+  OpenChatButton,
+  openLandingChat,
+  whenLauncherReady,
+} from "./open-chat-button";
 import { Reveal } from "./reveal";
 import { SiteNav } from "./site-nav";
 
@@ -145,5 +150,62 @@ describe("openLandingChat", () => {
     const clickOpen = addLauncher(true);
     expect(openLandingChat()).toBe(true);
     expect(clickOpen).not.toHaveBeenCalled();
+  });
+});
+
+describe("OpenChatButton", () => {
+  function addLauncher() {
+    const widget = document.createElement("chat-widget-host");
+    const button = document.createElement("button");
+    button.setAttribute("aria-expanded", "false");
+    const click = vi.fn();
+    button.addEventListener("click", click);
+    widget.attachShadow({ mode: "open" }).append(button);
+    document.body.append(widget);
+    return click;
+  }
+
+  it("remembers a click made before the widget loads, then opens the chat", async () => {
+    await act(async () => root.render(<OpenChatButton />));
+    const button = must(host.querySelector("button"));
+    await act(async () => button.click());
+    expect(button.getAttribute("aria-busy")).toBe("true");
+    expect(button.textContent).toContain("Loading the chat");
+
+    let click = vi.fn();
+    await act(async () => {
+      click = addLauncher();
+      await new Promise((resolve) => setTimeout(resolve, 0)); // let the MutationObserver run
+    });
+    expect(click).toHaveBeenCalledTimes(1);
+    expect(button.getAttribute("aria-busy")).toBeNull();
+    expect(button.textContent).toContain("Open the chat");
+  });
+
+  it("gives up after the wait and says so", async () => {
+    vi.useFakeTimers();
+    try {
+      await act(async () => root.render(<OpenChatButton />));
+      const button = must(host.querySelector("button"));
+      await act(async () => button.click());
+      await act(async () => vi.advanceTimersByTime(10_000));
+      expect(host.textContent).toContain("The chat didn't load");
+      expect(button.getAttribute("aria-busy")).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("whenLauncherReady fires at once if the launcher is already there, and cancel stops it", () => {
+    addLauncher();
+    const ready = vi.fn();
+    whenLauncherReady(ready, vi.fn());
+    expect(ready).toHaveBeenCalledTimes(1);
+    document.body.innerHTML = "";
+    const late = vi.fn();
+    const cancel = whenLauncherReady(late, vi.fn());
+    cancel();
+    addLauncher();
+    expect(late).not.toHaveBeenCalled();
   });
 });

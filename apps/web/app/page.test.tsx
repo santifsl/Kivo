@@ -136,6 +136,7 @@ describe.each([undefined, "pk_landing_test_fixture"])("landing page with key %s"
       /<h1 id="hero-title" class="font-display[^"]*">Support that answers from your docs\. <em class="block text-brand">Nothing else\.<\/em><\/h1>/,
     );
     expect(html).toContain(HERO_SUBTEXT);
+    expect(HERO_SUBTEXT.startsWith(`${APP_NAME} is`)).toBe(true);
     expect(link(html, "Get started free")).toMatchObject({ href: "/sign-up" });
     if (widgetKey) expect(link(html, "See it in action")).toMatchObject({ href: "#demo" });
     else expect(html).not.toContain("See it in action");

@@ -6,7 +6,7 @@ import { OpenChatButton } from "./open-chat-button";
 import { Reveal } from "./reveal";
 import { Section } from "./section";
 
-/** Questions the landing project's own knowledge (about Kivo) can answer. */
+/** Questions the landing project's own knowledge (about the app itself) can answer. */
 export const DEMO_QUESTIONS = [
   `How do I install ${APP_NAME} on my website?`,
   "What file types can I upload?",

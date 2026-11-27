@@ -1,3 +1,4 @@
+import { APP_NAME } from "@kivo/shared";
 import { cn } from "../ui/cn";
 import { Eyebrow } from "../ui/eyebrow";
 import styles from "./landing.module.css";
@@ -65,9 +66,9 @@ export function GroundedAnswers() {
               Answers grounded in your documents.
             </h2>
             <p className="max-w-lg text-base leading-relaxed text-ink-muted">
-              For each question, Kivo finds the passages in your knowledge that match and answers
-              from them alone. If your docs don&apos;t cover it, it says it doesn&apos;t know and
-              points the visitor to your team, instead of making something up.
+              For each question, {APP_NAME} finds the passages in your knowledge that match and
+              answers from them alone. If your docs don&apos;t cover it, it says it doesn&apos;t
+              know and points the visitor to your team, instead of making something up.
             </p>
           </div>
           <DocStack />
