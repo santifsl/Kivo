@@ -46,6 +46,8 @@ const admin = {
   secret: process.env.SUPABASE_SECRET_KEY,
 };
 
+// A real site has this; without it, phones lay the test page out at 980px and the panel looks tiny.
+const VIEWPORT = '<meta name="viewport" content="width=device-width, initial-scale=1">';
 const OUT = fileURLToPath(new URL("./screenshots/redesign/", import.meta.url));
 const WIDTHS = [375, 768, 1440] as const;
 const THEMES = ["light", "dark"] as const;
@@ -466,6 +468,7 @@ async function main() {
     // A fresh owner.
     console.log("Sign up a disposable owner");
     const ownerCtx = await context(browser, { theme: "light", width: 1440 });
+    await ownerCtx.grantPermissions(["clipboard-read", "clipboard-write"], { origin });
     const owner = await ownerCtx.newPage();
     await owner.goto(origin);
     ownerId = await signUp(owner, origin, email);
@@ -521,7 +524,7 @@ async function main() {
       ),
     ]);
     // One widget question so Conversations has a thread (the run's only OpenAI call).
-    site = await serveHtml("Audit page", snippet);
+    site = await serveHtml("Audit page", `${VIEWPORT}${snippet}`);
     const visitorCtx = await context(browser, { theme: "light", width: 1280 });
     const visitor = await visitorCtx.newPage();
     await openExternalPage(visitor, origin, site.origin);
@@ -585,7 +588,7 @@ async function main() {
 
     // Widget panel on a light page (never themed: once per width), and the launcher on our dark landing.
     console.log("Widget");
-    site ??= await serveHtml("Audit page", snippet);
+    site ??= await serveHtml("Audit page", `${VIEWPORT}${snippet}`);
     for (const width of WIDTHS) {
       const ctx = await context(browser, { theme: "light", width });
       const page = await ctx.newPage();
