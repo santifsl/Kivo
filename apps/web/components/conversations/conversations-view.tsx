@@ -83,11 +83,16 @@ export function ConversationView({ conversation, messages }: GetConversationResp
                 data-role={role}
                 className={cn("flex max-w-[90%] min-w-0 gap-2.5 sm:max-w-[75%]", visitor ? "self-end" : "self-start")}
               >
+                {/* The mark's own CSS sets display, so the theme switch goes on wrappers. */}
                 {visitor ? null : (
-                  <KivoAppMark size={28} tone="ink" decorative className="mt-0.5 shrink-0 rounded-md dark:hidden" />
-                )}
-                {visitor ? null : (
-                  <KivoAppMark size={28} tone="paper" decorative className="mt-0.5 hidden shrink-0 rounded-md dark:block" />
+                  <span aria-hidden="true" data-testid="bot-avatar" className="mt-0.5 shrink-0">
+                    <span className="dark:hidden">
+                      <KivoAppMark size={28} tone="ink" decorative />
+                    </span>
+                    <span className="hidden dark:block">
+                      <KivoAppMark size={28} tone="paper" decorative />
+                    </span>
+                  </span>
                 )}
                 <div className={cn("flex min-w-0 flex-col gap-1", visitor && "items-end")}>
                   <div
