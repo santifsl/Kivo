@@ -51,7 +51,7 @@ export function MobileNav({ projects, plan }: Omit<SidebarProps, "onNavigate">) 
             type="button"
             aria-hidden="true"
             tabIndex={-1}
-            className="absolute inset-0 bg-ink/40 backdrop-blur-sm"
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
             onClick={() => setOpen(false)}
           />
           <div
