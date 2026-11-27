@@ -16,10 +16,10 @@
 // Needs the same variables as e2e:core. Output: e2e/screenshots/redesign/ (PNGs + report.json).
 
 import assert from "node:assert/strict";
-import { mkdir, rm, writeFile } from "node:fs/promises";
+import { mkdir, readdir, rm, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { clerkSetup, setupClerkTestingToken } from "@clerk/testing/playwright";
-import { chromium, type Browser, type BrowserContext, type Page } from "playwright";
+import { chromium, type Browser, type BrowserContext, type Frame, type Page } from "playwright";
 import {
   allowPreview,
   askWidget,
@@ -153,13 +153,31 @@ function inPageChecks(): PageReport {
   const seen = new Set<string>();
 
   for (const el of Array.from(document.body.querySelectorAll("*"))) {
-    const ownText = Array.from(el.childNodes)
-      .filter((n) => n.nodeType === Node.TEXT_NODE)
-      .map((n) => n.textContent ?? "")
-      .join("")
-      .trim();
-    if (!ownText) continue;
     const style = getComputedStyle(el);
+    // Form fields show their value, or their placeholder in its own ::placeholder color.
+    let ownText: string;
+    let color = style.color;
+    if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) {
+      if (
+        el instanceof HTMLInputElement &&
+        /^(hidden|checkbox|radio|color|file|range|submit|button|image|reset)$/.test(el.type)
+      )
+        continue;
+      if (el.value) ownText = el.value.trim();
+      else {
+        ownText = el.placeholder.trim() ? `placeholder: ${el.placeholder.trim()}` : "";
+        color = getComputedStyle(el, "::placeholder").color;
+      }
+    } else if (el instanceof HTMLSelectElement) {
+      ownText = el.selectedOptions[0]?.text.trim() ?? "";
+    } else {
+      ownText = Array.from(el.childNodes)
+        .filter((n) => n.nodeType === Node.TEXT_NODE)
+        .map((n) => n.textContent ?? "")
+        .join("")
+        .trim();
+    }
+    if (!ownText) continue;
     const r = el.getBoundingClientRect();
     if (style.display === "none" || r.width < 2 || r.height < 2) continue;
     if (el.closest("[aria-hidden='true'], [hidden], noscript, script, style, template")) continue;
@@ -179,7 +197,7 @@ function inPageChecks(): PageReport {
     // Disabled controls are exempt from contrast (WCAG 1.4.3).
     if (el.closest("[disabled], [aria-disabled='true']")) continue;
 
-    const fg = rgba(style.color);
+    const fg = rgba(color);
     if (!fg) {
       unknownColors++;
       continue;
@@ -207,12 +225,12 @@ function inPageChecks(): PageReport {
     const min = large ? 3 : 4.5;
     const value = ratio(text, bg);
     if (value + 0.005 < min) {
-      const key = `${ownText.slice(0, 30)}|${style.color}|${bg.join(",")}`;
+      const key = `${ownText.slice(0, 30)}|${color}|${bg.join(",")}`;
       if (seen.has(key)) continue;
       seen.add(key);
       contrast.push({
         text: ownText.slice(0, 50),
-        fg: style.color,
+        fg: color,
         bg: `rgb(${bg.slice(0, 3).map(Math.round).join(", ")})${imageBehind ? " +image" : ""}`,
         ratio: Math.round(value * 100) / 100,
         min,
@@ -309,6 +327,38 @@ async function audit(page: Page, screen: Screen, theme: Theme | "-", width: Widt
   );
 }
 
+/** Runs in the page or the widget iframe: how the focused element looks, focused vs. blurred. */
+function probeFocus():
+  | { done: true }
+  | { done: false; skip: boolean; label: string; changed?: boolean; visible?: boolean } {
+  // Focus has left this document (e.g. tabbed out of the widget iframe).
+  if (!document.hasFocus()) return { done: true as const };
+  let el = document.activeElement;
+  while (el?.shadowRoot?.activeElement) el = el.shadowRoot.activeElement;
+  if (!el || el === document.body) return { done: true as const };
+  if (el.tagName === "IFRAME") return { done: false as const, skip: true, label: "iframe" };
+  const label = `${el.tagName.toLowerCase()} "${(el.getAttribute("aria-label") ?? el.textContent ?? "").trim().replace(/\s+/g, " ").slice(0, 40)}"`;
+  const snap = () => {
+    const s = getComputedStyle(el as Element);
+    return [
+      s.outlineStyle,
+      s.outlineWidth,
+      s.outlineColor,
+      s.boxShadow,
+      s.borderColor,
+      s.backgroundColor,
+      s.textDecorationLine,
+      s.color,
+    ].join("|");
+  };
+  const focused = snap();
+  const visible = (el as Element).matches(":focus-visible");
+  (el as HTMLElement).blur();
+  const blurred = snap();
+  (el as HTMLElement).focus();
+  return { done: false as const, skip: false, label, changed: focused !== blurred, visible };
+}
+
 /** Tabs through the page; every focused element must look different from its blurred self. */
 async function checkFocus(page: Page, screen: Screen, theme: Theme) {
   await page.goto(`${origin}${screen.path}`, { waitUntil: "domcontentloaded" });
@@ -319,32 +369,7 @@ async function checkFocus(page: Page, screen: Screen, theme: Theme) {
   let stops = 0;
   for (let i = 0; i < 60; i++) {
     await page.keyboard.press("Tab");
-    const result = await page.evaluate(() => {
-      let el = document.activeElement;
-      while (el?.shadowRoot?.activeElement) el = el.shadowRoot.activeElement;
-      if (!el || el === document.body) return { done: true as const };
-      if (el.tagName === "IFRAME") return { done: false as const, skip: true, label: "iframe" };
-      const label = `${el.tagName.toLowerCase()} "${(el.getAttribute("aria-label") ?? el.textContent ?? "").trim().replace(/\s+/g, " ").slice(0, 40)}"`;
-      const snap = () => {
-        const s = getComputedStyle(el as Element);
-        return [
-          s.outlineStyle,
-          s.outlineWidth,
-          s.outlineColor,
-          s.boxShadow,
-          s.borderColor,
-          s.backgroundColor,
-          s.textDecorationLine,
-          s.color,
-        ].join("|");
-      };
-      const focused = snap();
-      const visible = (el as Element).matches(":focus-visible");
-      (el as HTMLElement).blur();
-      const blurred = snap();
-      (el as HTMLElement).focus();
-      return { done: false as const, skip: false, label, changed: focused !== blurred, visible };
-    });
+    const result = await page.evaluate(probeFocus);
     if (result.done) break;
     stops++;
     if (!result.skip && !result.changed) missing.add(result.label);
@@ -415,8 +440,11 @@ const visible = (selector: (page: Page) => ReturnType<Page["locator"]>) => (page
   selector(page).first().waitFor();
 
 async function main() {
-  await rm(OUT, { recursive: true, force: true });
+  // Replace only what this script writes; README.md and core-flow-output.txt stay.
   await mkdir(OUT, { recursive: true });
+  for (const name of await readdir(OUT)) {
+    if (name.endsWith(".png") || name === "report.json") await rm(`${OUT}${name}`);
+  }
   await clerkSetup();
   const browser = await chromium.launch({
     executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH,
@@ -427,6 +455,7 @@ async function main() {
   let ownerId: string | undefined;
   let projectId: string | undefined;
   let site: Awaited<ReturnType<typeof serveHtml>> | undefined;
+  const cleanupErrors: unknown[] = [];
   const state = `${OUT}../.audit-state-${run}.json`;
 
   try {
@@ -624,6 +653,7 @@ async function main() {
           });
         }
       }
+      if (frame && width === 1440) await checkWidgetFocus(page, frame);
       await page.goto(origin);
       await page.locator("chat-widget-host button").first().waitFor();
       const launcher = `${width}-dark-17-launcher-on-landing.png`;
@@ -657,6 +687,7 @@ async function main() {
       reducedMotion: "reduce",
     });
     const rp = await reduced.newPage();
+    await checkWidgetReducedMotion(rp, site.origin);
     for (const screen of all.filter((s) => s.signedIn || s.path === "/"))
       await checkReducedMotion(rp, screen);
     await reduced.close();
@@ -669,14 +700,23 @@ async function main() {
       console.log(`  Clerk user ${ownerId ?? "(none)"} deleted`);
     } catch (error) {
       console.log(`  Clerk cleanup failed: ${String(error)}`);
+      cleanupErrors.push(error);
     }
     if (ownerId) {
-      const removed = await cleanSupabase(admin, ownerId, projectId ? [projectId] : []);
-      console.log(
-        `  Supabase verified clean (${removed.projects} project(s), ${removed.files} file(s) removed)`,
-      );
+      try {
+        const removed = await cleanSupabase(admin, ownerId, projectId ? [projectId] : []);
+        console.log(
+          `  Supabase verified clean (${removed.projects} project(s), ${removed.files} file(s) removed)`,
+        );
+      } catch (error) {
+        console.log(`  Supabase cleanup failed: ${String(error)}`);
+        cleanupErrors.push(error);
+      }
     }
     await browser.close();
+  }
+  if (cleanupErrors.length) {
+    throw new AggregateError(cleanupErrors, `Cleanup failed: delete ${email} by hand.`);
   }
 
   const report = {
@@ -692,6 +732,75 @@ async function main() {
   const byCheck = new Map<string, number>();
   for (const f of findings) byCheck.set(f.check, (byCheck.get(f.check) ?? 0) + 1);
   for (const [check, count] of byCheck) console.log(`  ${check}: ${count}`);
+}
+
+/** Tabs through the open widget panel; every stop must look different focused vs. blurred. */
+async function checkWidgetFocus(page: Page, frame: Frame) {
+  const panel = page.frameLocator("chat-widget-host iframe");
+  // Start on the first control, then Tab/Shift+Tab so the browser is in keyboard mode.
+  await panel.getByRole("button", { name: "Close chat" }).focus();
+  await page.keyboard.press("Tab");
+  await page.keyboard.press("Shift+Tab");
+  const stops: string[] = [];
+  for (let i = 0; i < 12; i++) {
+    const result = await frame.evaluate(probeFocus);
+    if (result.done || stops.includes(result.label)) break;
+    stops.push(result.label);
+    if (!result.skip && !result.changed) {
+      findings.push({
+        page: "16-widget-panel",
+        theme: "light",
+        width: 1440,
+        check: "focus",
+        detail: `no visible focus change: ${result.label}`,
+      });
+    }
+    await page.keyboard.press("Tab");
+  }
+  assert(stops.length > 0, "Expected focus stops in the widget panel.");
+  console.log(`  focus widget panel: ${stops.join(", ")}`);
+}
+
+/** Opens the widget with reduced motion: no panel transition, nothing animating in the panel. */
+async function checkWidgetReducedMotion(page: Page, siteOrigin: string) {
+  await openExternalPage(page, origin, siteOrigin);
+  await page.locator("chat-widget-host button").first().click();
+  // Read right away: a transition would be running now.
+  const loader = await page.evaluate(() => {
+    const root = document.querySelector("chat-widget-host")?.shadowRoot;
+    const panel = root?.querySelector(".p");
+    return {
+      duration: panel ? getComputedStyle(panel).transitionDuration : "missing",
+      running: root?.getAnimations().filter((a) => a.playState === "running").length ?? -1,
+    };
+  });
+  await page
+    .frameLocator("chat-widget-host iframe")
+    .getByRole("textbox", { name: "Message" })
+    .waitFor();
+  const frame = page.frames().find((f) => f.url().includes("/embed"));
+  const inPanel = frame
+    ? await frame.evaluate(
+        () => document.getAnimations().filter((a) => a.playState === "running").length,
+      )
+    : -1;
+  const problems = [
+    ...(/^0s(, 0s)*$/.test(loader.duration) ? [] : [`panel transition ${loader.duration}`]),
+    ...(loader.running === 0 ? [] : [`${loader.running} loader animation(s) running`]),
+    ...(inPanel === 0 ? [] : [`${inPanel} animation(s) running in the panel`]),
+  ];
+  for (const detail of problems) {
+    findings.push({
+      page: "16-widget-panel",
+      theme: "light",
+      width: 1440,
+      check: "reduced-motion",
+      detail,
+    });
+  }
+  console.log(
+    `  reduced motion widget: transition ${loader.duration}, loader ${loader.running}, panel ${inPanel}`,
+  );
 }
 
 /** Every bot message in a thread shows exactly one avatar mark (T08 renders one per theme). */
