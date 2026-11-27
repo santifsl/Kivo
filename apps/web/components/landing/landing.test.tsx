@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { PLAN_LIMITS, type PlanLimits } from "@kivo/shared";
 import { buildInstallSnippet, EXAMPLE_PUBLIC_KEY } from "./install-snippet-data";
 import { formatMonthlyPrice, getPricingRows } from "./pricing-data";
+import { LinkButton } from "./link-button";
 import { Reveal } from "./reveal";
 
 describe("getPricingRows", () => {
@@ -22,8 +23,21 @@ describe("getPricingRows", () => {
 
   it("reads every value from the limits it is given (nothing hardcoded)", () => {
     const changed: Record<"free" | "pro", PlanLimits> = {
-      free: { ...PLAN_LIMITS.free, projects: 2, messagesPerMonth: 150, knowledgeSources: 4, customColor: true },
-      pro: { ...PLAN_LIMITS.pro, projects: 10, messagesPerMonth: 12345, knowledgeSources: 50, hideBadge: false, animations: ["fade"] },
+      free: {
+        ...PLAN_LIMITS.free,
+        projects: 2,
+        messagesPerMonth: 150,
+        knowledgeSources: 4,
+        customColor: true,
+      },
+      pro: {
+        ...PLAN_LIMITS.pro,
+        projects: 10,
+        messagesPerMonth: 12345,
+        knowledgeSources: 50,
+        hideBadge: false,
+        animations: ["fade"],
+      },
     };
     const byLabel = Object.fromEntries(getPricingRows(changed).map((r) => [r.label, r]));
     expect(byLabel["Projects"]).toMatchObject({ free: "2", pro: "10" });
@@ -56,12 +70,22 @@ describe("buildInstallSnippet", () => {
 });
 
 describe("Reveal", () => {
-  it("starts hidden, and reduced motion keeps it visible with no transition", () => {
+  it("renders visible on the server (nothing stuck at opacity 0 before JS)", () => {
     const out = renderToStaticMarkup(<Reveal>hi</Reveal>);
-    expect(out).toContain('data-visible="false"');
-    expect(out).toContain("opacity-0");
-    for (const cls of ["motion-reduce:opacity-100", "motion-reduce:translate-y-0", "motion-reduce:transition-none"]) {
-      expect(out).toContain(cls);
-    }
+    expect(out).toContain('data-reveal="shown"');
+    expect(out).not.toContain("opacity-0");
+  });
+});
+
+describe("LinkButton", () => {
+  it("has hover colors that work on a link (not only `enabled:hover:`)", () => {
+    const primary = renderToStaticMarkup(<LinkButton href="/sign-up">Go</LinkButton>);
+    const secondary = renderToStaticMarkup(
+      <LinkButton href="/sign-in" variant="secondary">
+        Go
+      </LinkButton>,
+    );
+    expect(primary).toMatch(/class="[^"]*(?<![:\w-])hover:bg-accent-hover/);
+    expect(secondary).toMatch(/class="[^"]*(?<![:\w-])hover:bg-wash/);
   });
 });
