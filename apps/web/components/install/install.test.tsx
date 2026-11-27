@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { WIDGET_SCRIPT_PATH } from "@kivo/shared/embed";
 import { buildInstallSnippet, copyText, resolveAppOrigin } from "./install-snippet";
 import { COPY_FEEDBACK_MS, type CopyStatus, createCopyFeedback } from "./copy-feedback";
-import { INSTALL_STEPS, InstallView, SNIPPET_CODE_CLASSES } from "./install-view";
+import { INSTALL_STEPS, InstallView, SNIPPET_CODE_CLASSES, snippetParts } from "./install-view";
 import { SnippetCopyButton } from "./snippet-copy-button";
 
 vi.mock("@clerk/nextjs", () => ({ useClerk: () => ({ user: { id: "user_a" } }) }));
@@ -109,7 +109,9 @@ describe("InstallView", () => {
     const html = renderToStaticMarkup(<InstallView projectId={PROJECT} snippet={snippet} />);
     expect(html).not.toContain("<script");
     expect(html).toContain('class="ph-no-capture" data-testid="install-snippet"');
-    expect(html).toContain(
+    // The visible text is exactly the snippet (what e2e reads and the button copies).
+    const code = /data-testid="install-snippet">([\s\S]*?)<\/code>/.exec(html)?.[1] ?? "";
+    expect(code.replace(/<[^>]+>/g, "")).toBe(
       "&lt;script src=&quot;https://app.example.com/widget.js&quot; data-key=&quot;pk_abcdefgh1234&quot; async&gt;&lt;/script&gt;",
     );
     expect(INSTALL_STEPS).toEqual(["Copy the snippet", "Paste it before </body>", "Reload your site"]);
@@ -127,7 +129,16 @@ describe("InstallView", () => {
     expect(pre).not.toContain("break-all");
     expect(pre).not.toContain("break-words");
     expect(SNIPPET_CODE_CLASSES).not.toMatch(/break-(all|words)|wrap-anywhere|wrap-break-word/);
-    // The only break opportunities are the spaces between attributes: the URL and the key have none.
+    // Each space-separated part (the src URL, the key) is unbreakable; only the spaces between them wrap.
+    expect(snippetParts(snippet)).toEqual([
+      "<script",
+      'src="https://app.example.com/widget.js"',
+      `data-key="${KEY}"`,
+      "async></script>",
+    ]);
+    const spans = [...html.matchAll(/<span class="whitespace-nowrap">([^<]*)<\/span>/g)].map((m) => m[1]);
+    expect(spans).toHaveLength(4);
+    expect(spans[1]).toBe("src=&quot;https://app.example.com/widget.js&quot;");
     const [src, key] = [/src="([^"]+)"/.exec(snippet)?.[1], /data-key="([^"]+)"/.exec(snippet)?.[1]];
     expect(src).toBe("https://app.example.com/widget.js");
     expect(src).not.toMatch(/\s/);

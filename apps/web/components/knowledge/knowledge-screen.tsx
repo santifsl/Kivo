@@ -247,7 +247,7 @@ function UploadForm({
         </span>
         <span className="font-medium">Choose a file</span>
         <span className="text-xs text-ink-muted">or drop it here. It uploads as soon as you pick it.</span>
-        <span className="text-xs text-ink-subtle">PDF, Markdown (.md) or text (.txt), up to 10 MB.</span>
+        <span className="text-xs text-ink-muted">PDF, Markdown (.md) or text (.txt), up to 10 MB.</span>
         <input
           id={FILE_INPUT_ID}
           type="file"

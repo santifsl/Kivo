@@ -1,6 +1,6 @@
 import { ArrowUpRight } from "lucide-react";
 import Link from "next/link";
-import type { ReactNode } from "react";
+import { Fragment, type ReactNode } from "react";
 import { CUSTOMIZE_TAB, projectTabHref } from "../projects/project-tabs";
 import { Card } from "../ui/card";
 import { SnippetCopyButton } from "./snippet-copy-button";
@@ -9,12 +9,18 @@ import { SnippetCopyButton } from "./snippet-copy-button";
 export const INSTALL_STEPS = ["Copy the snippet", "Paste it before </body>", "Reload your site"] as const;
 
 /**
- * The code card's classes. It wraps only at the spaces between attributes (no
- * `break-all`), so a URL or key is never split; whatever still doesn't fit
- * scrolls sideways inside the card. The card is always dark (`theme-dark`).
+ * The code card's classes. Lines wrap only at the spaces between attributes:
+ * each part is a `whitespace-nowrap` span (browsers would otherwise break a URL
+ * after "/" or a key at "-"), and a part that still doesn't fit scrolls sideways
+ * inside the card. The card is always dark (`theme-dark`).
  */
 export const SNIPPET_CODE_CLASSES =
   "overflow-x-auto px-4 py-4 font-mono text-sm leading-relaxed break-normal whitespace-pre-wrap text-ink sm:px-5";
+
+/** The snippet split at its spaces: the only places a line may wrap. */
+export function snippetParts(snippet: string): string[] {
+  return snippet.split(" ");
+}
 
 /** The Install tab: three steps, the project's script tag with a copy button, and a "Test it" hint. */
 export function InstallView({ projectId, snippet }: { projectId: string; snippet: string }) {
@@ -40,7 +46,12 @@ export function InstallView({ projectId, snippet }: { projectId: string; snippet
             {/* Text, not HTML. */}
             <pre className={SNIPPET_CODE_CLASSES}>
               <code className="ph-no-capture" data-testid="install-snippet">
-                {snippet}
+                {snippetParts(snippet).map((part, i) => (
+                  <Fragment key={i}>
+                    {i > 0 ? " " : null}
+                    <span className="whitespace-nowrap">{part}</span>
+                  </Fragment>
+                ))}
               </code>
             </pre>
           </section>
